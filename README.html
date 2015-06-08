@@ -8893,6 +8893,63 @@ The <a id="X1"></a><a href="http://search.cpan.org/~mwendl/Statistics-Normality-
 <pre>perl ./CoNVaDING-0.1.4.6.pl</pre>
 </div></div>
 <p>If no options are used the help menu will appear.</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>Usage: ./countCNV-v0.1.4.7.pl &lt;mode&gt; &lt;parameters&gt;
+-h                    This manual.
+-mode                 Mode to run in, one of the following required:
+                StartWithBam :
+                   Start with BAM files as input, to enable duplicate
+                   removal use the rmdup variable.
+                        REQUIRED:
+                        [-inputDir, -outputDir, -bed, -controlsDir]
+                        OPTIONAL:
+                        [-rmDup, -useSampleAsControl]
+                 StartWithAvgCount :
+                    Start with Average Count files as input. This is a five column text file
+                    with predefined column names. Please read the manual for instructions.
+                        REQUIRED:
+                        [-inputDir, -outputDir, -bed, -controlsDir]
+                        OPTIONAL:
+                        [-useSampleAsControl]
+                 StartWithMatchScore :
+                     Start with Normalized Coverage files as input.
+                        REQUIRED:
+                        [-inputDir, -outputDir, -controlsDir]
+                        OPTIONAL:
+                        [-controlSamples, -sexChr]
+                 StartWithBestScore :
+                     Best score analysis using Match score files as input.
+                        REQUIRED:
+                        [-inputDir, -outputDir, -controlsDir]
+                        OPTIONAL:
+                        [-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh,
+                        -zScoreCutOffLow, -zScoreCutOffHigh]
+PARAMETERS:
+-inputDir           Input directory, depending on the analysis mode this contains
+                    BAM, AvgCount, normalized coverage or match score files.
+-bed                Input file specifying regions to analyze in BED format.
+-outputDir          Output directory to write results to.
+-controlsDir        Directory containing control samples.
+-controlSamples     Number of samples to use in Match score analysis. DEFAULT: 30
+-regionThreshold    Percentage of all control samples differing more than 3
+                    standard deviations from mean coverage of a region in the specified
+                    BED file to exlude from sample ratio calculation. DEFAULT: 20
+-rmDup              Switch to enable duplicate removal when using BAM files as input.
+-sexChr             Switch to include sex chromosomes in analysis.
+-useSampleAsControl Switch to use samples as control. Example: when using BAM
+                    files to create count files and subsequentially use the
+                    generated count files as controls.
+-ratioCutOffLow     Lower ratio cutoff value. Region ratio values below this
+                    threshold are marked as deletion. DEFAULT: 0.65
+-ratioCutOffHigh    Higher ratio cutoff value. Region ratio values above this
+                    threshold are marked as duplication. DEFAULT: 1.4
+-zScoreCutOffLow    Lower Z-score cutoff value. Regions with a Z-score below
+                    this threshold are marked as deletion. DEFAULT: -3
+-zScoreCutOffHigh   Higher Z-score cutoff value. Regions with a Z-score above
+                    this threshold are marked as duplication. DEFAULT: 3</pre>
+</div></div>
+<p><span class="label label-note">Note</span> The StartWithAvgCount option is not yet functional</p>
 <h2 id="create_normalized_count_files">Create normalized count files</h2>
 <p>The first step in the analysis is to create normalized count files. This can be done in two ways, from a bam file or from a text file including mean coverage per target.</p>
 <h3>StartWithBam</h3>
@@ -8979,7 +9036,8 @@ This enables the use of alternative analysis software.</p>
 -outputDir /PATH/TO/OUTPUTDIR \
 -bed /PATH/TO/DIR/target_bedfile.bed</pre>
 </div></div>
-<p>Also here the following options can be used if the samples should be used as a control set in later steps:</p>
+<p><span class="label label-note">Note</span> The software requires the input files to have the extension <strong>.txt</strong>
+Also here the following options can be used if the samples should be used as a control set in later steps:</p>
 <div class="literalblock">
 <div class="content monospaced">
 <pre>-useSampleAsControl
@@ -9004,8 +9062,6 @@ This enables the use of alternative analysis software.</p>
 <p>The <em>outputDir</em> option should specify the path to output folder. The script will produce two types of output files:</p>
 <p><strong>.best.match.score.txt</strong> show the paths to the selected control samples.</p>
 <p><strong>.normalized.autosomal.coverage.all.controls.txt</strong> show the normalized coverage for all possible control samples</p>
-<p><span class="label label-note">Note</span> @FREERK DO WE NEED THE .normalized.autosomal.coverage.all.controls.txt FILES, OR IS IT INTERMEDIATE AND CAN IT BE DELETED?
-NOTE: @FREERK IS THE MATCHSCORE STORED ANYWHERE ELSE THEN THE OUTPUT TO THE SCREEN?</p>
 <p>The <em>bed</em> option should again point to the bed file.
 The <em>controlsDir</em> option should show the directory in which the control samples that have to be used are stored.</p>
 <p>The analysis options can be further extended:</p>
@@ -9034,7 +9090,7 @@ The <em>controlsDir</em> option should show the directory in which the control s
 -bed /PATH/TO/DIR/target_bedfile.bed \
 -controlsDir /PATH/TO/CONTROLSDIR</pre>
 </div></div>
-<p><span class="label label-note">Note</span> @FREERK: REMOVE THE BEDFILE AND CONTROLSDIR AS REQUIREMENTS</p>
+<p><span class="label label-note">Note</span> The <strong>-bed</strong> and <strong>-controlsDir</strong> parameter are required but currently not used. They will be used in future versions.</p>
 <p>The <em>inputDir</em> option should specify the path to the folder in which the <strong>.best.match.score.txt</strong> files are stored (the outputfolder of the previous step).</p>
 <p>The <em>outputDir</em> option should specify the path to output folder. The script will produce six types of output files:</p>
 <p><strong>.best.score.log</strong> show the used control samples, the sample ratio score and the omitted regions for the sample ratio score calculation.</p>
@@ -9042,9 +9098,6 @@ The <em>controlsDir</em> option should show the directory in which the control s
 <p><strong>.best.score.shortlist.txt</strong> contains the high quality calls based on within sample target QC</p>
 <p><strong>.best.score.finallist.txt</strong> contains the high quality calls based on within and between sample target QC</p>
 <p><strong>.best.score.totallist.txt</strong> contains information about all targets (ratio scores, Z-scores, QC)</p>
-<p><strong>.best.score.txt</strong> contains information about all targets (ratio scores, Z-scores)</p>
-<p><span class="label label-note">Note</span> THE FINAL LIST IS NOT PRODUCED YET
-NOTE: @FREERK WHAT DOES THE <code>*.best.score.txt</code> FILE ADD IF WE ALREADY HAVE THE TOTALLIST (DELETE?)</p>
 <p>The analysis options can be further extended:</p>
 <p>The sample ratio calculation is based on calculation the variation coefficient of the normalized targets of the sample of interest. In this calculation highly variable targets are excluded. On default a target is considered highly variable if after transforming the normalized target ratio&#8217;s of all samples in the possible control group 20 percent or more of the samples have a Z-score outside the -3 to 3 range. This percentage can be altered using the <em>regionTreshold</em> option.
 For a threshold of 30 percent of the samples for instance the following option can be used:</p>
@@ -9067,7 +9120,6 @@ For a threshold of 30 percent of the samples for instance the following option c
 The target ratio is also used to filter calls for the shortlist. Both QC metrics are used for filtering the final list.</p>
 <p>Sample ratio: 0.09
 Target ratio: 0.10</p>
-<p>#NOTE: FREERK. VOOR DE FINAL LIST BEREKENING. ALLEEN DE ANDERE SAMPLES MEENEMEN DIE ONDER DE SAMPLEQC THRESHOLD BLIJVEN.</p>
 </section>
 <section id="contact">
   <div class="page-header">
