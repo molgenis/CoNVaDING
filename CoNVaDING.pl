@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.9";
+my $version = "v0.1.4.10";
 
 ##############################################################################################
 ##############################################################################################
@@ -48,7 +48,7 @@ GetOptions(
                 "outputDir=s"           => \$outputdir,
                 "bed:s"                 => \$bedfile, #optional
                 "controlSamples:s"      => \$numBestMatchSamplesCmdL, #optional
-                "regionThreshold:s"     => \$regionThreshold,
+                "regionThreshold:s"     => \$regionThreshold, #optional
                 "rmDup:s"               => \$rmdup, #optional
                 "sexChr:s"              => \$sexchr, #optional
                 "useSampleAsControl:s"  => \$sampleAsControl, #optional
@@ -225,14 +225,85 @@ if ($mode eq "StartWithBam"){
         print "\n############\nrmdup switch detected, duplicate removal included in analysis\n############\n\n";
         print "Starting removing duplicates and creating new BAM files..\n";
     }
-
     #Read BAM files
     print "Reading BAM files to process..\n";
     #Set file extension
     $extension = ".bam";
     readFile($inputdir, $extension);
     
-    foreach my $bam (@inputfiles){
+    #Start analysis from BAM file
+    startWithBam(\@inputfiles);
+    
+##################################################################
+##################################################################
+#Start analysis from match score
+}elsif ($mode eq "StartWithMatchScore"){
+    #continue
+    if (defined $sexchr) { #Use sex chromosomes switch added in cmdline
+        print "\n\n############\nsexchr switch detected, sex chromosomes included in analysis\n############\n\n";
+    }
+    #Read count TXT files
+    print "Starting search for best match scores..\n";
+    print "Reading count files..\n";
+    $extension = ".normalized.coverage.txt";
+    readFile($controlsdir, $extension); #Read files in controls directory
+    my @controlfiles = @inputfiles;
+    undef(@inputfiles);
+    readFile($inputdir, $extension); #Read files in input directory
+    print "Starting match score analysis..\n";
+    
+    #Start analysis from match score file
+    startWithMatchScore($extension, \@inputfiles, \@controlfiles);
+    
+##################################################################
+##################################################################
+#Start analysis from best score
+}elsif ($mode eq "StartWithBestScore"){
+    #continue
+    if (defined $sexchr) { #Use sex chromosomes switch added in cmdline
+        print "\n\n############\nsexchr switch detected, sex chromosomes included in analysis\n############\n\n";
+    }
+    #Read count TXT files
+    print "Starting search for best scores..\n";
+    #Read all normalized autosomal coverage control files into array
+    $extension = ".normalized.autosomal.coverage.all.controls.txt";
+    readFile($inputdir, $extension); #Read files in input directory
+    my @normAutoControls = @inputfiles;
+    undef(@inputfiles);
+    #Read best match score files
+    print "Reading best match score files..\n";
+    $extension = ".best.match.score.txt";
+    readFile($inputdir, $extension); #Read files in input directory
+    print "Starting best score analysis..\n";
+    
+    #Start CNV detection analysis
+    startWithBestScore(\@inputfiles, \@normAutoControls);
+    
+    #empty output variable
+    undef($outputToWrite);
+    
+####UNDER DEVELOPMENT#####
+}elsif ($mode eq "GenerateTargetQcList"){
+    
+    
+    
+} ####REMOVE THIS ONE LATER!!!
+
+#Retrieve and print end time
+my $endtime = localtime();
+print "\nFinished analysis $endtime\n";
+
+
+########################################################################################################
+########## SUBS #################### SUBS #################### SUBS #################### SUBS ##########
+########################################################################################################
+
+###############################################
+## Main code to extract region coverage from ##
+## BAM file(s)                               ##
+sub startWithBam{
+    my ($inputfiles) = @_;
+    foreach my $bam (@$inputfiles){
         #Check if *.bam.bai or *.bai file exist, otherwise skip this bam file
         my $dir;
         my $ext;
@@ -262,27 +333,19 @@ if ($mode eq "StartWithBam"){
             print "##### WARNING ##### WARNING #####\nCannot find an index file for file: $inputdir/$bam, skipping this file from analysis\n##### WARNING ##### WARNING #####\n\n";
         }
     }
-##################################################################
-##################################################################
-#Start analysis from match score
-}elsif ($mode eq "StartWithMatchScore"){
-    #continue
-    if (defined $sexchr) { #Use sex chromosomes switch added in cmdline
-        print "\n\n############\nsexchr switch detected, sex chromosomes included in analysis\n############\n\n";
-    }
-    #Read count TXT files
-    print "Starting search for best match scores..\n";
-    print "Reading count files..\n";
-    $extension = ".normalized.coverage.txt";
-    readFile($controlsdir, $extension); #Read files in controls directory
-    my @controlfiles = @inputfiles;
-    undef(@inputfiles);
-    readFile($inputdir, $extension); #Read files in input directory
-    print "Starting match score analysis..\n";
-    foreach my $inputfile (@inputfiles){ #Open sample file
+}
+
+###############################################
+## Main code to select most informative con- ##
+## trol samples                              ##
+sub startWithMatchScore{
+    my $extension = shift;
+    my ($inputfiles) = $_[0];
+    my ($controlfiles) = $_[1];
+    foreach my $inputfile (@$inputfiles){ #Open sample file
         $outputExtnsn = "normalized.autosomal.coverage.all.controls.txt"; #Specify extension for output normalized coverage file
         $colsToExtract = "CHR START STOP GENE REGION_COV NORMALIZED_AUTOSOMAL NORMALIZED_TOTAL"; #Specify Columns to extract
-        createNormalizedCoverageFiles($inputfile, $extension, $outputExtnsn, $colsToExtract, \@controlfiles); #Give input file to analyze, extension, columns to extract and list of controlfiles to use to function to retrieve normalized coverage
+        createNormalizedCoverageFiles($inputfile, $extension, $outputExtnsn, $colsToExtract, \@$controlfiles); #Give input file to analyze, extension, columns to extract and list of controlfiles to use to function to retrieve normalized coverage
         
         #Open output bestmatch file
         my $outputPostfixRemoved = $inputfile;
@@ -331,30 +394,13 @@ if ($mode eq "StartWithBam"){
         undef(%autodiff);
         undef(%sexdiff);
     }
-    
-##################################################################
-##################################################################
-#Start analysis from best score
-}elsif ($mode eq "StartWithBestScore"){
-    
-    #continue
-    if (defined $sexchr) { #Use sex chromosomes switch added in cmdline
-        print "\n\n############\nsexchr switch detected, sex chromosomes included in analysis\n############\n\n";
-    }
-    
-    #Read count TXT files
-    print "Starting search for best scores..\n";
-    #Read all normalized autosomal coverage control files into array
-    $extension = ".normalized.autosomal.coverage.all.controls.txt";
-    readFile($inputdir, $extension); #Read files in input directory
-    my @normAutoControls = @inputfiles;
-    undef(@inputfiles);
-    
-    #Read best match score files
-    print "Reading best match score files..\n";
-    $extension = ".best.match.score.txt";
-    readFile($inputdir, $extension); #Read files in input directory
-    print "Starting best score analysis..\n";
+}
+
+###############################################
+## Main code to detect CNVs                  ##
+sub startWithBestScore{
+    my ($inputfiles) = $_[0];
+    my ($normAutoControls) = $_[1];
     my $lastFileIdx = $#inputfiles;
     for (my $m=0; $m<=$lastFileIdx; $m++){
         my $inputfile = $inputfiles[$m];
@@ -403,7 +449,8 @@ if ($mode eq "StartWithBam"){
         
         # Read normalized_autosomal values file
         #Open norm auto file, further on calculate if sample is within 3SD from mean, otherwise exclude in sampleratio calculation
-        my $normautofile = $normAutoControls[$m];
+        my @normAutoCon = @$normAutoControls;
+        my $normautofile = $normAutoCon[$m];
         open(NORMAUTOFILE, "$inputdir/$normautofile") or die("Unable to open file: $!"); #Read count file
         my @normautofile= <NORMAUTOFILE>;
         close(NORMAUTOFILE);
@@ -598,9 +645,21 @@ if ($mode eq "StartWithBam"){
         
         #Write sample ratio score to log file in output directory
         $outputfile = "$outputdir/$outputPostfixRemoved.best.score.log"; #Output filename
-        foreach my $element (@inputfile) {
-            my $lin = $element;
-            $outputToWrite .= $lin; #concatenate full generated line to files
+        my $lastLineIdx = $#inputfile;
+        $header = uc($inputfile[0]); #Header in uppercase
+        chomp $header;
+        #Extract control header columnindices
+        @colNames = qw(AVERAGE_BEST_MATCH_SCORE);
+        getColumnIdx($header, \@colNames);
+        my $avgBestMatchScoreValIdx = $indices[0];
+        my @avgBestMatchScores;
+        for (my $i=1; $i<=$lastLineIdx; $i++){
+            my $line = $inputfile[$i];
+            chomp $line;
+            my @array = split("\t", $line);
+            my $avgBestMatchScoreVal = $array[$avgBestMatchScoreValIdx];
+            push(@avgBestMatchScores, $avgBestMatchScoreVal);
+            $outputToWrite .= "$line\n"; #concatenate full generated line to files
         }
         
         ######
@@ -662,35 +721,24 @@ if ($mode eq "StartWithBam"){
         my $high25perc = floor((0.975*$numValues));
         my @sliceNormVal = @sortedNormVal[($low25perc) .. ($high25perc-1)]; #Slice values out of array (why not $low25perc-1??)
         
+        #Calculate mean average best match score over all control samples
+        calcMeanSD(\@avgBestMatchScores);
+        my $meanAvgBestMatchScore = $mean;
         #Calculate sample ratio
         calcMeanSD(\@sliceNormVal); #Calculate mean and sd
         my $sampleRatio = ($sd/$mean);
-        $lin = "\n\nSAMPLE_RATIO: $sampleRatio\n"; #Add sample ratio to output logfile
+        $lin = "\n\nSAMPLE_RATIO: $sampleRatio\nMEAN_AVERAGE_BEST_MATCHSCORE: $meanAvgBestMatchScore\n"; #Add mean average best match score and sample ratio to output logfile
         $outputToWrite .= $lin;
         $outputToWrite .= $failedRegionsToWrite; #Add failed regions to output logfile
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
         print "Sample ratio: $sampleRatio\n";
+        print "Mean average best match score of all control samples: $meanAvgBestMatchScore\n";
         print "#######################################\n\n";
         
         createOutputLists($outputdir, $inputfile);
     }
-    undef($outputToWrite);
     
-####UNDER DEVELOPMENT#####
-}elsif ($mode eq "GenerateTargetQcList"){
-    
-    
-    
-} ####REMOVE THIS ONE LATER!!!
-
-#Retrieve and print end time
-my $endtime = localtime();
-print "\nFinished analysis $endtime\n";
-
-
-########################################################################################################
-########## SUBS #################### SUBS #################### SUBS #################### SUBS ##########
-########################################################################################################
+}
 
 sub createOutputLists{
     my $outputdir = shift;
@@ -701,7 +749,7 @@ sub createOutputLists{
     open(BESTSCORE, "$outputdir/$outputPostfixRemoved.best.score.txt") or die("Unable to open file: $!"); #Read best match file
     my @bestScoreFile= <BESTSCORE>;
     close(BESTSCORE);
-    
+    `rm $outputdir/$outputPostfixRemoved.best.score.txt`; #Remove *.best.score.txt file, since it is almost the same as other files produced
     my @targets;
     my @genes;
     my @values;
@@ -1135,7 +1183,6 @@ sub createOutputLists{
     undef(%totalGeneCounts);
 
 }
-
 
 sub allTargetNormalization {
     my $file = shift;
