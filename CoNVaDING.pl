@@ -110,13 +110,6 @@ if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount"){
     if (not defined $bedfile){
         die "Required BED file not specified, please specify to continue analysis.\n";
     }
-    #Open input BED file
-    print "Reading BED file..\n";
-    print "$bedfile\n";
-    print "Finished reading BED file\n\n";
-    #open (BED, "<$bedfile") or die "Cannot open file: $bedfile\n";
-    #@bedfile = <BED>;
-    #close(BED);
 }elsif ($mode eq "StartWithMatchScore" || $mode eq "StartWithBestScore"){ #Throw warning saying BED file is not used in this analysis.
     if (defined $bedfile){
         print "\n##### WARNING ##### WARNING #####\n";
@@ -233,7 +226,19 @@ if ($mode eq "StartWithBam"){
     
     #Start analysis from BAM file
     startWithBam(\@inputfiles);
+
+##################################################################
+##################################################################
+#Start analysis from average count files
+}elsif ($mode eq "StartWithAvgCount"){
+    #Read count TXT files
+    print "Reading count files..\n";
+    $extension = ".txt";
+    readFile($inputdir, $extension);
+    print "Starting counts analysis..\n";
     
+    startWithAvgCount(\@inputfiles);
+
 ##################################################################
 ##################################################################
 #Start analysis from match score
@@ -326,12 +331,86 @@ sub startWithBam{
             print "Writing normalized coverage counts to: $outputfile\n\n\n";
             undef($outputToWrite);
             #If $sampleAsControl variable is specified, write coverage.txt files to controlsdir too
-            if (defined $sampleAsControl){
-                `cp $outputfile $controlsdir`;
-            }
+            #if (defined $sampleAsControl){
+            #    `cp $outputfile $controlsdir`;
+            #}
         }else{ #Don't process this file, because it doesn't have an indexfile
             print "##### WARNING ##### WARNING #####\nCannot find an index file for file: $inputdir/$bam, skipping this file from analysis\n##### WARNING ##### WARNING #####\n\n";
         }
+    }
+}
+
+sub startWithAvgCount{
+    my ($inputfiles) = @_;
+    foreach my $txt (@$inputfiles){
+        #Set header for output file
+        $outputToWrite = "CHR\tSTART\tSTOP\tGENE\tREGION_COV\tAVG_AUTOSOMAL_COV\tAVG_TOTAL_COV\tAVG_GENE_COV\tNORMALIZED_AUTOSOMAL\tNORMALIZED_TOTAL\tNORMALIZED_GENE\n";
+        #Read file into array;
+        my $dir;
+        my $ext;
+        ($file,$dir,$ext) = fileparse($txt, qr/\.[^.]*/);
+        open(FILE, "$inputdir/$txt") or die("Unable to open file: $!"); #Read count file
+        my @file= <FILE>;
+        close(FILE);
+        #Retrieve chr, start, stop, genename and region coverage from file by searching column indices
+        my $header = uc($file[0]); #Header in uppercase
+        chomp $header;
+        my @colNames = qw(CHR START STOP GENE REGION_COV);
+        getColumnIdx($header, \@colNames);
+        my $chrIdx = $indices[0];
+        my $startIdx = $indices[1];
+        my $stopIdx = $indices[2];
+        my $geneIdx = $indices[3];
+        my $regcovIdx = $indices[4];
+        my $lastFileIdx=$#file;
+        #Retrieve chr, start, stop, gene and regcov for each line in avg count file
+        for (my $i=1; $i<=$lastFileIdx; $i++){
+            $line=$file[$i];
+            chomp $line;
+            my @lines=split("\t",$line);
+            my $chr=$lines[$chrIdx];
+            my $start=$lines[$startIdx];
+            my $stop=$lines[$stopIdx];
+            my $gene=$lines[$geneIdx];
+            my $regcov=$lines[$regcovIdx];
+            $key = $line;
+            #Calculate coverage from regions
+            calcGeneCov($chr, $start, $stop, $gene, $regcov, $line);
+        }
+        #Calculate coverage including sex chromomsomes
+        calcCovAutoSex(\@genes, \@covchrauto, \@covchrsex);
+        
+        #Foreach line in input file write away all calculated stats/values
+        for (my $i=1; $i<=$lastFileIdx; $i++){
+            $line=$file[$i];
+            chomp $line;
+            my @lines=split("\t",$line);
+            my $chr=$lines[$chrIdx];
+            my $start=$lines[$startIdx];
+            my $stop=$lines[$stopIdx];
+            my $gene=$lines[$geneIdx];
+            my $regcov=$lines[$regcovIdx];
+            $key = $line;
+            #Write all values
+            $line = "$chr\t$start\t$stop\t$gene\t$regcov"; #Produce line to print in correct order for output
+            writeCountFile($line, $key, $gene, $covchrautoval, $covchrall, \%genehash, \%counts, \%coverage);
+            $covchrautosum = 0;
+            $covchrsexsum = 0;
+        }
+        $outputfile = "$outputdir/$file.normalized.coverage.txt"; #Output filename
+        writeOutput($outputfile, $outputToWrite, $controlsdir); #Write output to above specified file
+        #If $sampleAsControl variable is specified, write coverage.txt files to controlsdir too
+        #if (defined $sampleAsControl){
+        #    `cp $outputfile $controlsdir`;
+        #}
+        #Empty all arrays and hashes
+        undef @genes;
+        undef %counts;
+        undef @covchrauto;
+        undef @covchrsex;
+        undef %coverage;
+        undef %genehash;
+        print "Finished processing file: $txt\n\n\n";
     }
 }
 
@@ -1641,11 +1720,17 @@ sub readFile {
 
 #Open output file and write contents from string away to file
 sub writeOutput {
-    $outputfile = shift;
-    $outputToWrite = shift;
+    #$outputfile = shift;
+    #$outputToWrite = shift;
+    #$controlsdir = shift;
+    my ($outputfile, $outputToWrite, $controlsdir) = @_;
     open (OUTPUT, ">$outputfile") or die "Cannot open outputfile: $outputfile\n";
     print OUTPUT $outputToWrite;
     close(OUTPUT);
+    #If $sampleAsControl variable is specified write output files to controlsdir too
+    if (defined $sampleAsControl && defined $controlsdir){
+        `cp $outputfile $controlsdir`;
+    }
 }
 
 
@@ -1707,7 +1792,7 @@ sub countFromBam {
         $covchrsexsum = 0;
     }
     $outputfile = "$outputdir/$file.normalized.coverage.txt"; #Output filename
-    writeOutput($outputfile, $outputToWrite); #Write output to above specified file
+    writeOutput($outputfile, $outputToWrite, $controlsdir); #Write output to above specified file
     #Empty all arrays and hashes
     undef @genes;
     undef %counts;
