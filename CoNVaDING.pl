@@ -9,6 +9,8 @@ use List::Util qw(sum);
 use Math::Complex;
 use POSIX qw(ceil);
 use POSIX qw(floor);
+#Remove this temporary hardcoded path to library
+use lib '/gcc/groups/gcc/tmp03/fvandijk/CNVdetection/lib/';
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
@@ -2191,6 +2193,13 @@ Usage: ./countCNV-$version.pl <mode> <parameters>
 \t\t\t\t[-inputDir, -outputDir, -controlsDir]
 \t\t\t\tOPTIONAL:
 \t\t\t\t[-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
+
+\t\t\tGenerateTargetQcList :
+\t\t\t\tGenerate a target QC list to use as input for finallist creation.
+\t\t\t\tREQUIRED:
+\t\t\t\t[-inputDir, -outputDir, -controlsDir]
+\t\t\t\tOPTIONAL:
+\t\t\t\t[-regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
 
 
 PARAMETERS:
