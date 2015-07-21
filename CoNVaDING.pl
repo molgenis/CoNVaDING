@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.10";
+my $version = "v0.1.4.11";
 
 ##############################################################################################
 ##############################################################################################
@@ -99,6 +99,28 @@ if ($mode eq "StartWithBestScore"){
     }
 }
 
+#Set default threshold values when running in GenerateTargetQcList mode
+if ($mode eq "GenerateTargetQcList"){
+    if (not defined $controlsdir) { #Throw error when controlsdir is not specified
+        die "Directory for controlsamples (-controlsDir) is not specified, please specify to continue analysis.\n";
+    }
+    if (not defined $regionThreshold) {
+        $regionThreshold = 20;
+    }
+    if (not defined $ratioCutOffLow) {
+        $ratioCutOffLow = 0.65;
+    }
+    if (not defined $ratioCutOffHigh) {
+        $ratioCutOffHigh = 1.4;
+    }
+    if (not defined $zScoreCutOffLow) {
+        $zScoreCutOffLow = -3;
+    }
+    if (not defined $zScoreCutOffHigh) {
+        $zScoreCutOffHigh = 3;
+    }
+}
+
 #Check if output directory exists, otherwise create it
 if (!-d $outputdir) { #Output directory does not exist, create it
     `mkdir -p $outputdir`;
@@ -110,13 +132,6 @@ if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount"){
     if (not defined $bedfile){
         die "Required BED file not specified, please specify to continue analysis.\n";
     }
-    #Open input BED file
-    print "Reading BED file..\n";
-    print "$bedfile\n";
-    print "Finished reading BED file\n\n";
-    #open (BED, "<$bedfile") or die "Cannot open file: $bedfile\n";
-    #@bedfile = <BED>;
-    #close(BED);
 }elsif ($mode eq "StartWithMatchScore" || $mode eq "StartWithBestScore"){ #Throw warning saying BED file is not used in this analysis.
     if (defined $bedfile){
         print "\n##### WARNING ##### WARNING #####\n";
@@ -131,7 +146,8 @@ if (not defined $numBestMatchSamplesCmdL){
 }
 
 #Check if controlsdir exists for four param options
-if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore" || $mode eq "GenerateTargetQcList"){ #Check if controlsdir is specified
+#if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore" || $mode eq "GenerateTargetQcList"){ #Check if controlsdir is specified
+if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore"){ #Check if controlsdir is specified
     if (not defined $controlsdir) { #Throw error when controlsdir is not specified
         die "Directory for controlsamples (-controlsDir) is not specified, please specify to continue analysis.\n";
     }else{
@@ -188,6 +204,12 @@ my $outputExtnsn;
 my $colsToExtract;
 my $perfectMatch=0;
 my $TAi;
+my $autoMean;
+my $autoSD;
+my $autoRatio;
+my $autoZscore;
+my $autoVc;
+my $outputdirOriginal;
 #Global arrays
 my @inputfiles;
 my @bamstocount;
@@ -203,6 +225,8 @@ my @fwdControlLineArray;
 my @rvrsControlLineArray;
 my @fwds;
 my @revrs;
+my @sampleRatio;
+my @TNciArray;
 #Global hashes
 my %coverage;
 my %genehash;
@@ -233,7 +257,19 @@ if ($mode eq "StartWithBam"){
     
     #Start analysis from BAM file
     startWithBam(\@inputfiles);
+
+##################################################################
+##################################################################
+#Start analysis from average count files
+}elsif ($mode eq "StartWithAvgCount"){
+    #Read count TXT files
+    print "Reading count files..\n";
+    $extension = ".txt";
+    readFile($inputdir, $extension);
+    print "Starting counts analysis..\n";
     
+    startWithAvgCount(\@inputfiles);
+
 ##################################################################
 ##################################################################
 #Start analysis from match score
@@ -248,7 +284,7 @@ if ($mode eq "StartWithBam"){
     $extension = ".normalized.coverage.txt";
     readFile($controlsdir, $extension); #Read files in controls directory
     my @controlfiles = @inputfiles;
-    undef(@inputfiles);
+    undeff(@inputfiles);
     readFile($inputdir, $extension); #Read files in input directory
     print "Starting match score analysis..\n";
     
@@ -269,7 +305,7 @@ if ($mode eq "StartWithBam"){
     $extension = ".normalized.autosomal.coverage.all.controls.txt";
     readFile($inputdir, $extension); #Read files in input directory
     my @normAutoControls = @inputfiles;
-    undef(@inputfiles);
+    undeff(@inputfiles);
     #Read best match score files
     print "Reading best match score files..\n";
     $extension = ".best.match.score.txt";
@@ -280,12 +316,86 @@ if ($mode eq "StartWithBam"){
     startWithBestScore(\@inputfiles, \@normAutoControls);
     
     #empty output variable
-    undef($outputToWrite);
+    undeff($outputToWrite);
     
 ####UNDER DEVELOPMENT#####
+##################################################################
+##################################################################
+#Generate target QC list from all controlsamples
 }elsif ($mode eq "GenerateTargetQcList"){
+    #Read count TXT files
+    print "Reading controls directory..\n";
+    #Read all *.txt files in control directory into array
+    $extension = ".txt";
+    readFile($controlsdir, $extension); #Read files in controls directory
+    my @controlfiles = @inputfiles;
+    undeff(@inputfiles);
+    readFile($inputdir, $extension); #Read files in input directory
+    #Set temporary outputdir to do intermediate work
+    $outputdirOriginal = $outputdir;
+    $outputdir="$outputdirOriginal/tmpStartWithMatchScore/";
+    `mkdir $outputdir`;
     
+    $numBestMatchSamplesCmdL=11;            ################################========> CHANGE THIS LATER AFTER CONSULTING LENNART!!
     
+    #Start analysis from match score file
+    startWithMatchScore($extension, \@inputfiles, \@controlfiles);
+    
+    #Read count TXT files
+    print "Starting search for best scores..\n";
+    #Read all normalized autosomal coverage control files into array
+    $extension = ".normalized.autosomal.coverage.all.controls.txt";
+    readFile("$outputdirOriginal/tmpStartWithMatchScore/", $extension); #Read files in input directory
+    my @normAutoControls = @inputfiles;
+    undeff(@inputfiles);
+    #Read best match score files
+    print "Reading best match score files..\n";
+    $extension = ".best.match.score.txt";
+    readFile("$outputdirOriginal/tmpStartWithMatchScore/", $extension); #Read files in input directory
+    print "Starting best score analysis..\n";
+    
+    #Set temporary outputdir to do intermediate work
+    $outputdir="$outputdirOriginal/tmpStartWithBestScore/";
+    `mkdir $outputdir`;
+    
+    $inputdir="$outputdirOriginal/tmpStartWithMatchScore/";
+
+    #Start CNV detection analysis
+    startWithBestScore(\@inputfiles, \@normAutoControls);
+    
+    #empty output variable
+    undeff($outputToWrite);
+    
+    #Remove temporary matchscore directory
+    `rm -r $outputdirOriginal/tmpStartWithMatchScore/`;
+    
+    #Read all *.log files in control directory into array
+    $extension = ".log";
+    $inputdir = "$outputdirOriginal/tmpStartWithBestScore/";
+    readFile($inputdir, $extension); #Read files in controls directory
+    my @logfiles = @inputfiles;
+    undeff(@inputfiles);
+    
+    #Extract sampleratio from *.log file
+    my @passSampleRatioSamples;
+    foreach my $logfile (@logfiles){
+        my $grep = `grep SAMPLE_RATIO: $inputdir/$logfile`;
+        chomp $grep;
+        if ($grep =~ m/SAMPLE_RATIO: ([0-9].+)/gs){ #Check if sampleratio is below 0.09, otherwise don't use it in targetlist analysis
+            my $sampleRatio = $1;
+            if ($sampleRatio <= 0.09) { #####SAMPLERATIO BELOW 0.09, should this be hardcoded?? ####
+                $logfile =~ s/.log/.totallist.txt/gs; #Change *.log extension to *.totallist.txt
+                push(@passSampleRatioSamples, "$inputdir/$logfile");
+            }
+        }
+    }
+    
+    print "Generating target QC list..\n";
+    
+    #Calculate target autoVC
+    generateTargetQcList(\@passSampleRatioSamples);
+    
+    print "Done generating target QC list\n";
     
 } ####REMOVE THIS ONE LATER!!!
 
@@ -297,6 +407,104 @@ print "\nFinished analysis $endtime\n";
 ########################################################################################################
 ########## SUBS #################### SUBS #################### SUBS #################### SUBS ##########
 ########################################################################################################
+
+###############################################
+## Main code to generate target QC list from ##
+## files in controls directory               ##
+sub generateTargetQcList{
+    my ($inputfiles) = @_;
+    
+    #Check all files in control dir
+    #Calculate autoVC for all samples and push into big table/matrix
+    #Calc if >20% targets are low quality, to do so take:
+    #  Samples with sampleRatio < 0.09 (does this need to be a parameter?) (from chapter 6.4, manuscript version 07072015)
+    #  If an other target in same event has more samples failing as compared to this one, do calculate it as being correct.
+    #Set header for output file
+    $outputToWrite = "CHR\tSTART\tSTOP\tGENE"; #Instantiate header to write
+    my %autoVcHash;
+    my @keyFiles;
+    my $lastInputfilesIdx = $#inputfiles; #Idx of last inputfile
+    my @autoVCsToOutput;
+    for (my $j=0; $j <= $lastInputfilesIdx; $j++){ #Iterate over inputfiles
+        my $totallist = @$inputfiles[$j];
+        #Read file into array;
+        my $dir;
+        my $ext;
+        ($file,$dir,$ext) = fileparse($totallist, qr/\.[^.]*/);
+        #Append filename to outputToWrite to create header
+        $outputToWrite .= "\t$file";
+        open(FILE, "$totallist") or die("Unable to open file: $!"); #Read count file
+        my @file= <FILE>;
+        close(FILE);
+        #Retrieve chr, start, stop, genename and region coverage from file by searching column indices
+        my $header = uc($file[0]); #Header in uppercase
+        chomp $header;
+        #Extract columns from header and use as index
+        my @colNames = qw(CHR START STOP GENE AUTO_VC);
+        getColumnIdx($header, \@colNames);
+        my $chrIdx = $indices[0];
+        my $startIdx = $indices[1];
+        my $stopIdx = $indices[2];
+        my $geneIdx = $indices[3];
+        my $autoVcIdx = $indices[4];
+        my $lastFileIdx=$#file;
+        #Retrieve chr, start, stop, gene and regcov for each line in avg count file
+        my @autoVCs;
+        for (my $i=1; $i<=$lastFileIdx; $i++){ #Iterate over lines in file
+            $line=$file[$i];
+            chomp $line;
+            my @lines=split("\t",$line);
+            my $chr = $lines[$chrIdx];
+            my $start = $lines[$startIdx];
+            my $stop = $lines[$stopIdx];
+            my $gene = $lines[$geneIdx];
+            my $autoVc = $lines[$autoVcIdx];
+            if ($j == 0){ #If first file to pass, add chr,start,stop,gene to array, to use in output later
+                push(@autoVCsToOutput, "$chr\t$start\t$stop\t$gene");
+            }
+            push(@autoVCs, $autoVc); #Push autoVC in array
+        }
+        my $autoVcString = join("_", @autoVCs); #Join all autoVCs and push into string
+        $autoVcHash{ $file } = $autoVcString; #Push filename as key and string as value into hash
+        push(@keyFiles, $file); #Save filenames in particular order for output later
+    }
+    $outputToWrite .= "\n";
+    
+    my $lastKeyFilesIdx = $#keyFiles; #Retrieve last idx from files
+    my @autoVcOutput;
+    #Loop through files to create matrix of autoVCs
+    for (my $i=0; $i <= $lastKeyFilesIdx; $i++){
+        my $key = $keyFiles[$i]; #Loop through filenames, take value from hash, split into array and loop through array per line
+        my @autoVCsToPrint = split("_", $autoVcHash{ $key }); #Push splitted value into array to iterate over later
+        
+        my $lastAutoVCsToPrintIdx = $#autoVCsToPrint; #Last index from autoVC array
+        
+        #Loop through all values and add them to original value in autoVCsToOutput array
+        for( my $k=0; $k<=$lastAutoVCsToPrintIdx; $k++){ #Iterate over all autoVC values for sample
+            my $autoVcToAppend = $autoVCsToPrint[$k]; #Retrieve autoVC for target k from sample
+            my $newElement;
+            if ($i == $lastKeyFilesIdx) { #last file to process, so add additional linebreak to value
+                $newElement = $autoVCsToOutput[$k] . "\t$autoVcToAppend\n"; #Take original value from array and append new autoVC for target k to it
+            }else{
+                $newElement = $autoVCsToOutput[$k] . "\t$autoVcToAppend";
+            }
+            #Splice output element k from array and update with new (above created) element
+            splice(@autoVCsToOutput, $k, 1, $newElement);
+        }
+    }
+
+    #Concat array with autoVCs to output string
+    my $outputString = join("", @autoVCsToOutput);
+    $outputToWrite .= $outputString;
+    
+    #Write output to file
+    $outputfile = "$outputdirOriginal/targetQcList.txt"; #Output filename
+    writeOutput($outputfile, $outputToWrite); #Write output to above specified file
+
+    #Remove temporary directory
+    `rm -r $outputdir`;
+    
+}
 
 ###############################################
 ## Main code to extract region coverage from ##
@@ -324,14 +532,86 @@ sub startWithBam{
                 print "\n";
             }
             print "Writing normalized coverage counts to: $outputfile\n\n\n";
-            undef($outputToWrite);
+            undeff($outputToWrite);
             #If $sampleAsControl variable is specified, write coverage.txt files to controlsdir too
-            if (defined $sampleAsControl){
-                `cp $outputfile $controlsdir`;
-            }
+            #if (defined $sampleAsControl){
+            #    `cp $outputfile $controlsdir`;
+            #}
         }else{ #Don't process this file, because it doesn't have an indexfile
             print "##### WARNING ##### WARNING #####\nCannot find an index file for file: $inputdir/$bam, skipping this file from analysis\n##### WARNING ##### WARNING #####\n\n";
         }
+    }
+}
+
+sub startWithAvgCount{
+    my ($inputfiles) = @_;
+    foreach my $txt (@$inputfiles){
+        #Set header for output file
+        $outputToWrite = "CHR\tSTART\tSTOP\tGENE\tREGION_COV\tAVG_AUTOSOMAL_COV\tAVG_TOTAL_COV\tAVG_GENE_COV\tNORMALIZED_AUTOSOMAL\tNORMALIZED_TOTAL\tNORMALIZED_GENE\n";
+        #Read file into array;
+        my $dir;
+        my $ext;
+        ($file,$dir,$ext) = fileparse($txt, qr/\.[^.]*/);
+        open(FILE, "$inputdir/$txt") or die("Unable to open file: $!"); #Read count file
+        my @file= <FILE>;
+        close(FILE);
+        #Retrieve chr, start, stop, genename and region coverage from file by searching column indices
+        my $header = uc($file[0]); #Header in uppercase
+        chomp $header;
+        my @colNames = qw(CHR START STOP GENE REGION_COV);
+        getColumnIdx($header, \@colNames);
+        my $chrIdx = $indices[0];
+        my $startIdx = $indices[1];
+        my $stopIdx = $indices[2];
+        my $geneIdx = $indices[3];
+        my $regcovIdx = $indices[4];
+        my $lastFileIdx=$#file;
+        #Retrieve chr, start, stop, gene and regcov for each line in avg count file
+        for (my $i=1; $i<=$lastFileIdx; $i++){
+            $line=$file[$i];
+            chomp $line;
+            my @lines=split("\t",$line);
+            my $chr=$lines[$chrIdx];
+            my $start=$lines[$startIdx];
+            my $stop=$lines[$stopIdx];
+            my $gene=$lines[$geneIdx];
+            my $regcov=$lines[$regcovIdx];
+            $key = $line;
+            #Calculate coverage from regions
+            calcGeneCov($chr, $start, $stop, $gene, $regcov, $line);
+        }
+        #Calculate coverage including sex chromomsomes
+        calcCovAutoSex(\@genes, \@covchrauto, \@covchrsex);
+        
+        #Foreach line in input file write away all calculated stats/values
+        for (my $i=1; $i<=$lastFileIdx; $i++){
+            $line=$file[$i];
+            chomp $line;
+            my @lines=split("\t",$line);
+            my $chr=$lines[$chrIdx];
+            my $start=$lines[$startIdx];
+            my $stop=$lines[$stopIdx];
+            my $gene=$lines[$geneIdx];
+            my $regcov=$lines[$regcovIdx];
+            $key = $line;
+            #Write all values
+            $line = "$chr\t$start\t$stop\t$gene\t$regcov"; #Produce line to print in correct order for output
+            writeCountFile($line, $key, $gene, $covchrautoval, $covchrall, \%genehash, \%counts, \%coverage);
+            $covchrautosum = 0;
+            $covchrsexsum = 0;
+        }
+        $outputfile = "$outputdir/$file.normalized.coverage.txt"; #Output filename
+        writeOutput($outputfile, $outputToWrite, $controlsdir); #Write output to above specified file
+        #If $sampleAsControl variable is specified, write coverage.txt files to controlsdir too
+        #if (defined $sampleAsControl){
+        #    `cp $outputfile $controlsdir`;
+        #}
+        #Empty all arrays and hashes
+        undeff(@genes, @covchrauto, @covchrsex);
+        undef(%counts);
+        undef(%coverage);
+        undef(%genehash);
+        print "Finished processing file: $txt\n\n\n";
     }
 }
 
@@ -381,7 +661,7 @@ sub startWithMatchScore{
             @keys = sort { $autodiff{$a} <=> $autodiff{$b} } keys(%autodiff);
             @vals = @autodiff{@keys};
         }
-        undef($outputToWrite);
+        undeff($outputToWrite);
         $outputToWrite= "SAMPLE\tSAMPLE_PATH\tCONTROL_SAMPLE\tCONTROL_SAMPLE_PATH\tAVERAGE_BEST_MATCH_SCORE\n"; #Assign header to output best match file
         
         for (my $k=0; $k < $numBestMatchSamples; $k++){
@@ -530,8 +810,6 @@ sub startWithBestScore{
             push(@NORMGENE, $refNormGene);
         }
 
-        my @sampleRatio;
-        my @TNciArray;
         #Iterate through controls in array of arrays
         for (my $i=0; $i<$lastLineSampleFile; $i++){ #$numBestMatchSamples
             my @controlAutoArray;
@@ -551,40 +829,18 @@ sub startWithBestScore{
             }
             
             #####SAMPLE NORMALIZATION#####
-            #Calculate mean and SD for Auto array
-            calcMeanSD(\@controlAutoArray);
-            #mean and sd are returned by function, calculate ratio, z-score and variation coefficient
-            #ratio, observed devided by mean
-            my $autoMean = $mean;
-            my $autoSD = $sd;
-            my $autoRatio;
-            my $autoZscore;
-            my $autoVc;
-            push (@TNciArray, "$autoMean");
-            if ($autoMean == 0 || $autoSD == 0) {
-                $autoRatio = "NA";
-                $autoZscore = "NA";
-                $autoVc = "NA";
-                print "\n##### WARNING ##### WARNING #####\n";
-                print $controlChr[$i] . ":" . $controlStart[$i] . "-" . $controlStop[$i] . "\t" . $controlGene[$i] . "\n";
-                print "Mean or Standard Deviation is 0.\nCan not calculate ratio, zscore and variation coefficient on this region\n";
-            }else{
-                $autoRatio = ($sampleValue/$autoMean);
-                #z-score, observed minus mean devided by sd
-                $autoZscore = (($sampleValue-$autoMean)/$autoSD);
-                #variation coefficient, sd devided by mean
-                $autoVc = ($autoSD/$autoMean);
-                #push autoRatio in array, to calculate the VC ratio for the complete sample
-                push(@sampleRatio, $autoRatio);
-            }
+            my $lin = $controlChr[$i] . ":" . $controlStart[$i] . "-" . $controlStop[$i] . "\t" . $controlGene[$i] . "\n";
             
-            my $lin = $controlChr[$i] . "\t" . $controlStart[$i] . "\t" . $controlStop[$i] . "\t" . $controlGene[$i] . "\t$sampleValue\t";
+            calcAutoRatioZscoreVc($sampleValue, $lin, \@controlAutoArray);
+            
+            $lin = $controlChr[$i] . "\t" . $controlStart[$i] . "\t" . $controlStop[$i] . "\t" . $controlGene[$i] . "\t$sampleValue\t";
             $outputToWrite .= $lin; #concatenate full generated line to files
             $lin = "$autoRatio\t$autoZscore\t$autoVc\t";
             $outputToWrite .= $lin; #concatenate full generated line to files
             
             my $TNsi = $NORMGENE[0]->[$i];
             calcMeanSD(\@TNciArray);
+            undef(@TNciArray);
             my $TNciMean = $mean;
             my $TNciSD=  $sd;
             my $ATNci = $TNciMean;
@@ -634,6 +890,8 @@ sub startWithBestScore{
             #Concatenate outputs
             $lin = "$geneRatio\t$geneZscore\t$geneVc\t$pVal\n";
             $outputToWrite .= $lin; #concatenate full generated line to files
+            
+            undeff($autoMean, $autoSD, $autoRatio, $autoZscore, $autoVc);
         }
         #Open output bestmatch file
         my $outputPostfixRemoved = $inputfile;
@@ -641,7 +899,7 @@ sub startWithBestScore{
         $outputfile = "$outputdir/$outputPostfixRemoved.best.score.txt"; #Output filename
         print "#######################################\n\n";
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
-        undef($outputToWrite);
+        undeff($outputToWrite);
         
         #Write sample ratio score to log file in output directory
         $outputfile = "$outputdir/$outputPostfixRemoved.best.score.log"; #Output filename
@@ -713,7 +971,7 @@ sub startWithBestScore{
         foreach my $idxKeep (@idxToKeep){ #Iterate over indices to keep
             push(@calcSampleRatio, $sampleRatio[$idxKeep]); #Push sample ratios to calculate mean and sd on into new array
         }
-        
+        undef(@sampleRatio);
         #Select 95% samples (exclude low and high) for sampleRatio calculation
         my @sortedNormVal = sort { $a <=> $b } @calcSampleRatio;
         my $numValues = scalar(@sortedNormVal);
@@ -738,6 +996,36 @@ sub startWithBestScore{
         createOutputLists($outputdir, $inputfile);
     }
     
+}
+
+sub calcAutoRatioZscoreVc{
+    my $sampleValue = $_[0];
+    my $lin = $_[1];
+    my ($controlAutoArray) = $_[2];
+    #Calculate mean and SD for Auto array
+    calcMeanSD(\@$controlAutoArray);
+    #mean and sd are returned by function, calculate ratio, z-score and variation coefficient
+    #ratio, observed devided by mean
+    $autoMean = $mean;
+    $autoSD = $sd;
+    push (@TNciArray, "$autoMean");
+    if ($autoMean == 0 || $autoSD == 0) {
+        $autoRatio = "NA";
+        $autoZscore = "NA";
+        $autoVc = "NA";
+        print "\n##### WARNING ##### WARNING #####\n";
+        print $lin;
+        print "Mean or Standard Deviation is 0.\nCan not calculate ratio, zscore and variation coefficient on this region\n";
+    }else{
+        $autoRatio = ($sampleValue/$autoMean);
+        #z-score, observed minus mean devided by sd
+        $autoZscore = (($sampleValue-$autoMean)/$autoSD);
+        #variation coefficient, sd devided by mean
+        $autoVc = ($autoSD/$autoMean);
+        #push autoRatio in array, to calculate the VC ratio for the complete sample
+        push(@sampleRatio, $autoRatio);
+    }
+    return(@TNciArray, @sampleRatio, $autoRatio, $autoZscore, $autoVc);
 }
 
 sub createOutputLists{
@@ -1157,17 +1445,11 @@ sub createOutputLists{
                 $abberationCount = 0; #Reset $abberationCount to 0
                 $shapPassCount = 0;
                 $highQualAbberationCount = 0; #Reset $highQualAbberationCount to 0
-                undef(@chrStarts);
-                undef($chr);
-                undef($start);
-                undef($stop);
+                undeff(@chrStarts, $chr, $start, $stop);
             }
         }else{
             #Undef chr, start array and variables
-            undef(@chrStarts);
-            undef($chr);
-            undef($start);
-            undef($stop);
+            undeff(@chrStarts, $chr, $start, $stop);
             $abberationCount = 0; #Reset $abberationCount to 0
             $shapPassCount = 0;
         }
@@ -1175,10 +1457,7 @@ sub createOutputLists{
     writeOutput($outputfileTotal, $outputTotalToWrite); #Write output to above specified file
     writeOutput($outputfileLong, $outputLongToWrite); #Write output to above specified file
     writeOutput($outputfileShort, $outputShortToWrite); #Write output to above specified file
-    undef(@arrayRefs);
-    undef($outputTotalToWrite);
-    undef($outputLongToWrite);
-    undef($outputShortToWrite);
+    undeff(@arrayRefs, $outputTotalToWrite, $outputLongToWrite, $outputShortToWrite);
     undef(%geneCounts);
     undef(%totalGeneCounts);
 
@@ -1384,7 +1663,7 @@ sub targetAudit {
         auditTtest($fwdmean, $fwdSD, $rvrsmean, $rvrsSD, $numSamples, \@fwdControlLineArrayValues, \@rvrsControlLineArrayValues);
         my $resultTAi = $TAi;
         $resultAuditTtest{ $target } = $resultTAi;
-        undef($TAi);
+        undeff($TAi);
     }
     return(%resultAuditTtest);
 }
@@ -1402,10 +1681,7 @@ sub auditTtest {
     
     #second part, calc TAi
     $TAi = (abs(($forwardMean-$reverseMean))) / $SDFRN;
-    undef(@fwdControlLineArray);
-    undef(@rvrsControlLineArray);
-    undef(@fwds);
-    undef(@revrs);
+    undeff(@fwdControlLineArray, @rvrsControlLineArray, @fwds, @revrs);
     return($TAi);
 }
 
@@ -1626,8 +1902,7 @@ sub calcMeanSD {
     #Calculate Standard deviation, square root of variance
     $sd = sqrt($variance);
     return($mean, $sd);
-    undef(@$values);
-    undef(@sqdiff);
+    undeff(@$values, @sqdiff);
 }
 
 #Read inputfiles by extension and push into array
@@ -1641,11 +1916,17 @@ sub readFile {
 
 #Open output file and write contents from string away to file
 sub writeOutput {
-    $outputfile = shift;
-    $outputToWrite = shift;
+    #$outputfile = shift;
+    #$outputToWrite = shift;
+    #$controlsdir = shift;
+    my ($outputfile, $outputToWrite, $controlsdir) = @_;
     open (OUTPUT, ">$outputfile") or die "Cannot open outputfile: $outputfile\n";
     print OUTPUT $outputToWrite;
     close(OUTPUT);
+    #If $sampleAsControl variable is specified write output files to controlsdir too
+    if (defined $sampleAsControl && defined $controlsdir){
+        `cp $outputfile $controlsdir`;
+    }
 }
 
 
@@ -1707,14 +1988,12 @@ sub countFromBam {
         $covchrsexsum = 0;
     }
     $outputfile = "$outputdir/$file.normalized.coverage.txt"; #Output filename
-    writeOutput($outputfile, $outputToWrite); #Write output to above specified file
+    writeOutput($outputfile, $outputToWrite, $controlsdir); #Write output to above specified file
     #Empty all arrays and hashes
-    undef @genes;
-    undef %counts;
-    undef @covchrauto;
-    undef @covchrsex;
-    undef %coverage;
-    undef %genehash;
+    undeff (@genes, @covchrauto, @covchrsex);
+    undef(%counts);
+    undef(%coverage);
+    undef(%genehash);
     print "Finished processing file: $bam\n";
     return ($outputfile);
 }
@@ -1851,6 +2130,10 @@ sub rmTmpBAMs{
     `rm $outputdir/$file.aligned.only.sam`;
     `rm $outputdir/$file.aligned.only.bam`;
     `rm $outputdir/$file.aligned.only.bam.bai`;
+}
+
+sub undeff {
+    @_[0..@_-1] = ();
 }
 
 #Usage of software
