@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.11";
+my $version = "v0.1.4.12";
 
 ##############################################################################################
 ##############################################################################################
@@ -37,7 +37,7 @@ my $version = "v0.1.4.11";
 ##############################################################################################
 
 #Commandline variables
-my ($help, $mode, $inputdir, $controlsdir, $outputdir, $bedfile, $rmdup, $sexchr, $sampleAsControl, $numBestMatchSamplesCmdL, $regionThreshold, $ratioCutOffLow , $ratioCutOffHigh, $zScoreCutOffLow , $zScoreCutOffHigh);
+my ($help, $mode, $inputdir, $controlsdir, $outputdir, $bedfile, $rmdup, $sexchr, $sampleAsControl, $numBestMatchSamplesCmdL, $regionThreshold, $ratioCutOffLow , $ratioCutOffHigh, $zScoreCutOffLow, $zScoreCutOffHigh, $sampleRatioScore, $targetQcList, $percentageLessReliableTargets);
 
 #### get options
 GetOptions(
@@ -55,7 +55,10 @@ GetOptions(
                 "ratioCutOffLow:s"      => \$ratioCutOffLow, #optional
                 "ratioCutOffHigh:s"     => \$ratioCutOffHigh, #optional
                 "zScoreCutOffLow:s"     => \$zScoreCutOffLow, #optional
-                "zScoreCutOffHigh:s"    => \$zScoreCutOffHigh #optional
+                "zScoreCutOffHigh:s"    => \$zScoreCutOffHigh, #optional
+                "sampleRatioScore:s"    => \$sampleRatioScore, #optional
+                "targetQcList:s"        => \$targetQcList, #optional
+                "percentageLessReliableTargets:s" => \$percentageLessReliableTargets #optional
           );
 usage() and exit(1) if $help;
 #Obligatory args
@@ -68,7 +71,7 @@ usage() and exit(1) unless $outputdir;
 if (not defined $mode){ #If $mode is not defined, assign default value "StartWithBam"
     $mode = "StartWithBam";
 }
-if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore" || $mode eq "StartWithBestScore" || $mode eq "GenerateTargetQcList") {
+if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore" || $mode eq "StartWithBestScore" || $mode eq "GenerateTargetQcList" || $mode eq "CreateFinalList") {
     #continue
 }else{ #Throw error
     die "Mode $mode is not supported. Please read the manual.\n";
@@ -118,6 +121,9 @@ if ($mode eq "GenerateTargetQcList"){
     }
     if (not defined $zScoreCutOffHigh) {
         $zScoreCutOffHigh = 3;
+    }
+    if (not defined $sampleRatioScore) {
+        $sampleRatioScore = 0.09;
     }
 }
 
@@ -175,6 +181,19 @@ if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWi
     }    
 }
 
+#Checks when running in CreateFinalList mode
+if ($mode eq "CreateFinalList"){ #Check if targetQcList is specified
+    if (not defined $targetQcList) { #Throw error when targetQcList is not specified
+        die "Target QC list (-targetQcList) is not specified, please specify to continue analysis.\n";
+    }
+    if (not defined $sampleRatioScore) {
+        $sampleRatioScore = 0.09;
+    }
+    if (not defined $percentageLessReliableTargets) {
+        $percentageLessReliableTargets = 20;
+    }
+}
+
 #Global vars
 my $extension;
 my $rmdupfile;
@@ -227,6 +246,7 @@ my @fwds;
 my @revrs;
 my @sampleRatio;
 my @TNciArray;
+my @passSampleRatioSamples;
 #Global hashes
 my %coverage;
 my %genehash;
@@ -318,7 +338,6 @@ if ($mode eq "StartWithBam"){
     #empty output variable
     undeff($outputToWrite);
     
-####UNDER DEVELOPMENT#####
 ##################################################################
 ##################################################################
 #Generate target QC list from all controlsamples
@@ -335,8 +354,6 @@ if ($mode eq "StartWithBam"){
     $outputdirOriginal = $outputdir;
     $outputdir="$outputdirOriginal/tmpStartWithMatchScore/";
     `mkdir $outputdir`;
-    
-    $numBestMatchSamplesCmdL=11;            ################################========> CHANGE THIS LATER AFTER CONSULTING LENNART!!
     
     #Start analysis from match score file
     startWithMatchScore($extension, \@inputfiles, \@controlfiles);
@@ -377,27 +394,40 @@ if ($mode eq "StartWithBam"){
     undeff(@inputfiles);
     
     #Extract sampleratio from *.log file
-    my @passSampleRatioSamples;
+
     foreach my $logfile (@logfiles){
         my $grep = `grep SAMPLE_RATIO: $inputdir/$logfile`;
         chomp $grep;
-        if ($grep =~ m/SAMPLE_RATIO: ([0-9].+)/gs){ #Check if sampleratio is below 0.09, otherwise don't use it in targetlist analysis
+        if ($grep =~ m/SAMPLE_RATIO: ([0-9].+)/gs){ #Check if sampleratio is below threshold(default 0.09), otherwise don't use it in targetlist analysis
             my $sampleRatio = $1;
-            if ($sampleRatio <= 0.09) { #####SAMPLERATIO BELOW 0.09, should this be hardcoded?? ####
+            if ($sampleRatio <= $sampleRatioScore) {
                 $logfile =~ s/.log/.totallist.txt/gs; #Change *.log extension to *.totallist.txt
                 push(@passSampleRatioSamples, "$inputdir/$logfile");
             }
         }
     }
     
-    print "Generating target QC list..\n";
+    print "\nGenerating target QC list..\n";
     
     #Calculate target autoVC
     generateTargetQcList(\@passSampleRatioSamples);
     
-    print "Done generating target QC list\n";
+    print "\nDone generating target QC list\n";
+
+##################################################################
+##################################################################
+#Create final list based on target QC file
+}elsif ($mode eq "CreateFinalList"){ #Apply the target filtering using the file created in previous step
+    #Read shortlist TXT files
+    print "Reading input directory..\n";
+    #Read all *.txt files in input directory into array
+    $extension = ".shortlist.txt";
+    readFile($inputdir, $extension); #Read files in controls directory
     
-} ####REMOVE THIS ONE LATER!!!
+    #Generate the final list
+    createFinalList(\@inputfiles);
+    
+}
 
 #Retrieve and print end time
 my $endtime = localtime();
@@ -409,24 +439,157 @@ print "\nFinished analysis $endtime\n";
 ########################################################################################################
 
 ###############################################
+## Main code to generate final list using    ##
+## the target QC list                        ##
+sub createFinalList{
+    my ($inputfiles) = @_;
+    
+    #Read target QC list into array;
+    open(FILE, "$targetQcList") or die("Unable to open file: $!"); #Read count file
+    my @file= <FILE>;
+    close(FILE);
+    #Retrieve chr, start, stop and genename from file by searching column indices
+    my $header = uc($file[0]); #Header in uppercase
+    chomp $header;
+    #Extract columns from header and use as index
+    my @colNames = qw(CHR START STOP GENE);
+    getColumnIdx($header, \@colNames);
+    my $chrIdx = $indices[0];
+    my $startIdx = $indices[1];
+    my $stopIdx = $indices[2];
+    my $geneIdx = $indices[3];
+    my $lastFileIdx=$#file;
+    
+    #Push every index into hash, to exclude from analysis later
+    my %toExclude;
+    foreach my $index (@indices){
+        $toExclude{ $index } = $index;
+    }
+    
+    my @indicesCalculation;
+    #Iterate over header to extract indices to calculate 20% quality over
+    my @Header = split("\t", $header);
+    my $lastHeaderIdx = $#Header;
+    for (my $j=0; $j <= $lastHeaderIdx; $j++){
+        if (exists $toExclude{ $j }){
+            #Exclude from calculation
+        }else{
+            push(@indicesCalculation, $j);
+        }
+    }
+    
+    my %targetQC;
+    #Retrieve chr, start, stop, gene for each line in target QC list
+    for (my $i=1; $i<=$lastFileIdx; $i++){ #Iterate over lines in file
+        $line=$file[$i];
+        chomp $line;
+        my @lines=split("\t",$line);
+        my $chr = $lines[$chrIdx];
+        my $start = $lines[$startIdx];
+        my $stop = $lines[$stopIdx];
+        my $gene = $lines[$geneIdx];
+        #Calculate number of samples passing cutoff, setting target to PASS or FAIL
+        my $key = "$chr\t$start\t$stop\t$gene";
+        my $total=0;
+        my $highQual=0;
+        my $lowQual=0;
+        foreach my $element (@indicesCalculation){
+            my $autoVC = $lines[$element];
+            $total++;
+            if ($autoVC < $sampleRatioScore) { #Good quality
+                $highQual++;
+            }else{ #Low quality target
+                $lowQual++;
+            }
+        }
+        my $perc = (($lowQual/$total)*100); #percentage low quality targets
+        if ($perc > $percentageLessReliableTargets){ #More than X percentage (default 20%) of targets are low quality, so FAIL
+            $targetQC{ $key } = "FAIL";
+        }else{
+            $targetQC{ $key } = "PASS";
+        }
+    }
+
+    #Iterate over input files, asses if failing targets are within the calls in the shortlist file
+    foreach my $shortlist (@$inputfiles){
+        print "\n\n#######################################\n";
+        print "Analyzing sample: $shortlist..\n";
+        #Read file into array;
+        my $dir;
+        my $ext;
+        ($file,$dir,$ext) = fileparse($shortlist, qr/\.[^.]*/);
+        open(FILE, "$inputdir/$shortlist") or die("Unable to open file: $!"); #Read count file
+        my @file= <FILE>;
+        close(FILE);
+        #Retrieve chr, start, stop, genename and region coverage from file by searching column indices
+        my $header = uc($file[0]); #Header in uppercase
+        chomp $header;
+        $outputToWrite .= "$header\n";
+        my @colNames = qw(CHR START STOP GENE);
+        getColumnIdx($header, \@colNames);
+        my $chrIdx = $indices[0];
+        my $startIdx = $indices[1];
+        my $stopIdx = $indices[2];
+        my $geneIdx = $indices[3];
+        my $lastFileIdx=$#file;
+        #Retrieve chr, start, stop, gene and regcov for each line in avg count file
+        for (my $k=1; $k<=$lastFileIdx; $k++){
+            $line=$file[$k];
+            chomp $line;
+            my @lines=split("\t",$line);
+            $chr=$lines[$chrIdx];
+            $start=$lines[$startIdx];
+            $stop=$lines[$stopIdx];
+            $gene=$lines[$geneIdx];
+            
+            my $totalTargets=0;
+            my $targetsFail=0;
+            #Check if all targets within a single event fail, if true filter event out of finallist.txt
+            foreach my $target (sort keys %targetQC){
+                my @targets = split("\t", $target);
+                my $chrQC = $targets[0];
+                my $startQC = $targets[1];
+                my $stopQC = $targets[2];
+                my $geneQC = $targets[3];
+                if ($chrQC == $chr && $startQC >= $start && $stopQC <= $stop) { #chromosomes matching and start and stop of targetQC falls within the region extracted from *.shortlist.txt file
+                    $totalTargets++;
+                    #Check if target is pass or fail
+                    my $check = $targetQC{ $target };
+                    if ($check eq "FAIL") { #Target failed QC, count it
+                        $targetsFail++;
+                    }
+                }
+            }
+            #Check if number of failing targets equals number of total targets within this event, if true event fails quality threshold and is removed from *.finallist.txt
+            if ($totalTargets == $targetsFail) {
+                #event fails QC, don't write it to output
+                print "\nEvent failing target QC: $line\n";
+            }else{
+                $outputToWrite .= "$line\n";
+            }
+        }
+    #Write output to *.finallist.txt file
+    $outputfile = "$outputdir/$file.finallist.txt"; #Output filename
+    writeOutput($outputfile, $outputToWrite); #Write output to above specified file
+    print "#######################################\n\n";
+    undeff($outputToWrite);
+    }
+}
+
+###############################################
 ## Main code to generate target QC list from ##
 ## files in controls directory               ##
 sub generateTargetQcList{
-    my ($inputfiles) = @_;
+    my ($passSampleRatioSamples) = @_;
     
-    #Check all files in control dir
-    #Calculate autoVC for all samples and push into big table/matrix
-    #Calc if >20% targets are low quality, to do so take:
-    #  Samples with sampleRatio < 0.09 (does this need to be a parameter?) (from chapter 6.4, manuscript version 07072015)
-    #  If an other target in same event has more samples failing as compared to this one, do calculate it as being correct.
     #Set header for output file
     $outputToWrite = "CHR\tSTART\tSTOP\tGENE"; #Instantiate header to write
     my %autoVcHash;
     my @keyFiles;
-    my $lastInputfilesIdx = $#inputfiles; #Idx of last inputfile
+    my $lastInputfilesIdx = $#passSampleRatioSamples; #Idx of last inputfile
     my @autoVCsToOutput;
     for (my $j=0; $j <= $lastInputfilesIdx; $j++){ #Iterate over inputfiles
-        my $totallist = @$inputfiles[$j];
+        my $totallist = @$passSampleRatioSamples[$j];
         #Read file into array;
         my $dir;
         my $ext;
@@ -2197,7 +2360,14 @@ Usage: ./countCNV-$version.pl <mode> <parameters>
 \t\t\t\tREQUIRED:
 \t\t\t\t[-inputDir, -outputDir, -controlsDir]
 \t\t\t\tOPTIONAL:
-\t\t\t\t[-regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
+\t\t\t\t[-controlSamples, -regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
+
+\t\t\tCreateFinalList :
+\t\t\t\tCreates the final list using the target QC list for filtering.
+\t\t\t\tREQUIRED:
+\t\t\t\t[-inputDir, -targetQcList, -outputDir]
+\t\t\t\tOPTIONAL:
+\t\t\t\t[-sampleRatioScore, -percentageLessReliableTargets]
 
 
 PARAMETERS:
@@ -2209,6 +2379,8 @@ PARAMETERS:
 -outputDir\t\tOutput directory to write results to.
 
 -controlsDir\t\tDirectory containing control samples.
+
+-targetQcList\t\tPath to file containing target QC values.
 
 -controlSamples\t\tNumber of samples to use in Match score analysis. DEFAULT: 30
 
@@ -2235,6 +2407,12 @@ PARAMETERS:
 
 -zScoreCutOffHigh\tHigher Z-score cutoff value. Regions with a Z-score above
 \t\t\tthis threshold are marked as duplication. DEFAULT: 3
+
+-sampleRatioScore\tSample ratio z-score cutoff value. Sample with a ratio
+\t\t\tscore below this value are excluded from analysis. DEFAULT: 0.09
+
+-percentageLessReliableTargets\tTarget labelled as less reliable in percentage
+\t\t\tof control samples. DEFAULT: 20
 #########################################################################################################
 
 EOF
