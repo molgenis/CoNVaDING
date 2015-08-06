@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.12";
+my $version = "v0.1.4.13";
 
 ##############################################################################################
 ##############################################################################################
@@ -1007,7 +1007,12 @@ sub startWithBestScore{
             my $TNciMean = $mean;
             my $TNciSD=  $sd;
             my $ATNci = $TNciMean;
-            my $TNNsi = ($TNsi/$ATNci);
+            my $TNNsi;
+            if ($ATNci == 0) { #Check if normalized total depth for target in sample equals 0 (In very rare occasions this is true)
+                $TNNsi = 0;
+            }else{
+                $TNNsi = ($TNsi/$ATNci);
+            }
             
             #####GENE NORMALIZATION#####
             $sampleValue = $NORMGENE[0]->[$i]; #Use sampleValue normalized gene
