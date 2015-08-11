@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.13";
+my $version = "v0.1.4.15";
 
 ##############################################################################################
 ##############################################################################################
@@ -185,9 +185,6 @@ if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWi
 if ($mode eq "CreateFinalList"){ #Check if targetQcList is specified
     if (not defined $targetQcList) { #Throw error when targetQcList is not specified
         die "Target QC list (-targetQcList) is not specified, please specify to continue analysis.\n";
-    }
-    if (not defined $sampleRatioScore) {
-        $sampleRatioScore = 0.09;
     }
     if (not defined $percentageLessReliableTargets) {
         $percentageLessReliableTargets = 20;
@@ -496,7 +493,7 @@ sub createFinalList{
         foreach my $element (@indicesCalculation){
             my $autoVC = $lines[$element];
             $total++;
-            if ($autoVC < $sampleRatioScore) { #Good quality
+            if ($autoVC <= 0.10) { #Good quality
                 $highQual++;
             }else{ #Low quality target
                 $lowQual++;
@@ -1571,6 +1568,7 @@ sub createOutputLists{
         my $abberation = $arrayRefs[3][$m];
         my $quality = $arrayRefs[4][$m];
         my $shap = $arrayRefs[6][$m];
+        my @array = split("\t", $target);
         $outputTotalToWrite .= "$target\t$gene\t$vals\t$abberation\t$quality\t$shap\n"; #Add failed regions to output total file
         if ($abberation eq "DEL" || $abberation eq "DUP" || $abberation eq "HOM_DEL" || $abberation eq "HOM_DUP") { #If abberation detected, check next abberation, afterwards write to longlist file
             my $nextAbberation = $arrayRefs[3][$m+1];
@@ -1606,6 +1604,8 @@ sub createOutputLists{
                     if ($abberationCount == 0 ) {
                         $outputShortToWrite .= "$chr\t$start"; #Write event chr and start
                     }else{
+                        #push(@chrStarts, $chr);
+                        #push(@chrStarts, $start);
                         $outputShortToWrite .= $chrStarts[0] . "\t" . $chrStarts[1];
                     }
                     $outputShortToWrite .= "\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write high quality events
@@ -1613,11 +1613,11 @@ sub createOutputLists{
                 $abberationCount = 0; #Reset $abberationCount to 0
                 $shapPassCount = 0;
                 $highQualAbberationCount = 0; #Reset $highQualAbberationCount to 0
-                undeff(@chrStarts, $chr, $start, $stop);
+                undef(@chrStarts); undef($chr); undef($start); undef($stop);
             }
         }else{
             #Undef chr, start array and variables
-            undeff(@chrStarts, $chr, $start, $stop);
+            undef(@chrStarts); undef($chr); undef($start); undef($stop);
             $abberationCount = 0; #Reset $abberationCount to 0
             $shapPassCount = 0;
         }
@@ -2372,7 +2372,7 @@ Usage: ./countCNV-$version.pl <mode> <parameters>
 \t\t\t\tREQUIRED:
 \t\t\t\t[-inputDir, -targetQcList, -outputDir]
 \t\t\t\tOPTIONAL:
-\t\t\t\t[-sampleRatioScore, -percentageLessReliableTargets]
+\t\t\t\t[-percentageLessReliableTargets]
 
 
 PARAMETERS:
