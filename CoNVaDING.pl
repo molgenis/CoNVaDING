@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.15";
+my $version = "v0.1.4.16";
 
 ##############################################################################################
 ##############################################################################################
@@ -392,6 +392,10 @@ if ($mode eq "StartWithBam"){
     
     #Extract sampleratio from *.log file
 
+    print "\n#######################################\n";
+    print "\n\nSamples failing sample ratio threshold of $sampleRatioScore:\n\n";
+    
+    
     foreach my $logfile (@logfiles){
         my $grep = `grep SAMPLE_RATIO: $inputdir/$logfile`;
         chomp $grep;
@@ -400,10 +404,14 @@ if ($mode eq "StartWithBam"){
             if ($sampleRatio <= $sampleRatioScore) {
                 $logfile =~ s/.log/.totallist.txt/gs; #Change *.log extension to *.totallist.txt
                 push(@passSampleRatioSamples, "$inputdir/$logfile");
+            }else{
+                #Print samples failing sample ratio score to stdout
+                print "$logfile\n";
             }
         }
     }
     
+    print "\n\n#######################################\n\n";
     print "\nGenerating target QC list..\n";
     
     #Calculate target autoVC
@@ -493,7 +501,9 @@ sub createFinalList{
         foreach my $element (@indicesCalculation){
             my $autoVC = $lines[$element];
             $total++;
-            if ($autoVC <= 0.10) { #Good quality
+            if ($autoVC eq "NA"){
+                $lowQual++;
+            }elsif ($autoVC <= 0.10) { #Good quality
                 $highQual++;
             }else{ #Low quality target
                 $lowQual++;
@@ -535,6 +545,9 @@ sub createFinalList{
             chomp $line;
             my @lines=split("\t",$line);
             $chr=$lines[$chrIdx];
+            $chr =~ s/X/23/g;
+            $chr =~ s/Y/24/g;
+            $chr =~ s/Z/25/g;
             $start=$lines[$startIdx];
             $stop=$lines[$stopIdx];
             $gene=$lines[$geneIdx];
@@ -545,6 +558,9 @@ sub createFinalList{
             foreach my $target (sort keys %targetQC){
                 my @targets = split("\t", $target);
                 my $chrQC = $targets[0];
+                $chrQC =~ s/X/23/g;
+                $chrQC =~ s/Y/24/g;
+                $chrQC =~ s/Z/25/g;
                 my $startQC = $targets[1];
                 my $stopQC = $targets[2];
                 my $geneQC = $targets[3];
