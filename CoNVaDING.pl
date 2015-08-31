@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.16";
+my $version = "v0.1.4.17";
 
 ##############################################################################################
 ##############################################################################################
@@ -783,7 +783,7 @@ sub startWithAvgCount{
         #    `cp $outputfile $controlsdir`;
         #}
         #Empty all arrays and hashes
-        undeff(@genes, @covchrauto, @covchrsex);
+        undef(@genes); undef(@covchrauto); undef(@covchrsex);
         undef(%counts);
         undef(%coverage);
         undef(%genehash);
@@ -1072,7 +1072,7 @@ sub startWithBestScore{
             $lin = "$geneRatio\t$geneZscore\t$geneVc\t$pVal\n";
             $outputToWrite .= $lin; #concatenate full generated line to files
             
-            undeff($autoMean, $autoSD, $autoRatio, $autoZscore, $autoVc);
+            undef($autoMean); undef($autoSD); undef($autoRatio); undef($autoZscore); undef($autoVc);
         }
         #Open output bestmatch file
         my $outputPostfixRemoved = $inputfile;
@@ -1641,7 +1641,7 @@ sub createOutputLists{
     writeOutput($outputfileTotal, $outputTotalToWrite); #Write output to above specified file
     writeOutput($outputfileLong, $outputLongToWrite); #Write output to above specified file
     writeOutput($outputfileShort, $outputShortToWrite); #Write output to above specified file
-    undeff(@arrayRefs, $outputTotalToWrite, $outputLongToWrite, $outputShortToWrite);
+    undef(@arrayRefs); undef($outputTotalToWrite); undef($outputLongToWrite); undef($outputShortToWrite);
     undef(%geneCounts);
     undef(%totalGeneCounts);
 
@@ -1847,7 +1847,7 @@ sub targetAudit {
         auditTtest($fwdmean, $fwdSD, $rvrsmean, $rvrsSD, $numSamples, \@fwdControlLineArrayValues, \@rvrsControlLineArrayValues);
         my $resultTAi = $TAi;
         $resultAuditTtest{ $target } = $resultTAi;
-        undeff($TAi);
+        undef($TAi);
     }
     return(%resultAuditTtest);
 }
@@ -1865,7 +1865,7 @@ sub auditTtest {
     
     #second part, calc TAi
     $TAi = (abs(($forwardMean-$reverseMean))) / $SDFRN;
-    undeff(@fwdControlLineArray, @rvrsControlLineArray, @fwds, @revrs);
+    undef(@fwdControlLineArray); undef(@rvrsControlLineArray); undef(@fwds); undef(@revrs);
     return($TAi);
 }
 
@@ -2086,7 +2086,8 @@ sub calcMeanSD {
     #Calculate Standard deviation, square root of variance
     $sd = sqrt($variance);
     return($mean, $sd);
-    undeff(@$values, @sqdiff);
+    undef(@$values);
+    undef(@sqdiff);
 }
 
 #Read inputfiles by extension and push into array
@@ -2174,7 +2175,7 @@ sub countFromBam {
     $outputfile = "$outputdir/$file.normalized.coverage.txt"; #Output filename
     writeOutput($outputfile, $outputToWrite, $controlsdir); #Write output to above specified file
     #Empty all arrays and hashes
-    undeff (@genes, @covchrauto, @covchrsex);
+    undef(@genes); undef(@covchrauto); undef(@covchrsex);
     undef(%counts);
     undef(%coverage);
     undef(%genehash);
