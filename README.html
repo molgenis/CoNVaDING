@@ -8894,6 +8894,78 @@ The <a id="X1"></a><a href="http://search.cpan.org/~mwendl/Statistics-Normality-
 <pre>perl ./CoNVaDING-0.1.4.17.pl</pre>
 </div></div>
 <p>If no options are used the help menu will appear.</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>Usage: ./countCNV-v0.1.4.17.pl &lt;mode&gt; &lt;parameters&gt;
+-h                    This manual.
+-mode                 Mode to run in, one of the following required:
+                      StartWithBam :
+                              Start with BAM files as input, to enable duplicate
+                              removal use the rmdup variable.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -bed, -controlsDir]
+                              OPTIONAL:
+                              [-rmDup, -useSampleAsControl]
+                      StartWithAvgCount :
+                              Start with Average Count files as input. This is a five column text file
+                              with predefined column names. Please read the manual for instructions.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -bed, -controlsDir]
+                              OPTIONAL:
+                              [-useSampleAsControl]
+                      StartWithMatchScore :
+                              Start with Normalized Coverage files as input.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-controlSamples, -sexChr]
+                      StartWithBestScore :
+                              Best score analysis using Match score files as input.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
+                      GenerateTargetQcList :
+                              Generate a target QC list to use as input for finallist creation.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-controlSamples, -regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
+                      CreateFinalList :
+                              Creates the final list using the target QC list for filtering.
+                              REQUIRED:
+                              [-inputDir, -targetQcList, -outputDir]
+                              OPTIONAL:
+                              [-percentageLessReliableTargets]
+PARAMETERS:
+-inputDir             Input directory, depending on the analysis mode this contains
+                      BAM, AvgCount, normalized coverage or match score files.
+-bed                  Input file specifying regions to analyze in BED format.
+-outputDir            Output directory to write results to.
+-controlsDir          Directory containing control samples.
+-targetQcList         Path to file containing target QC values.
+-controlSamples       Number of samples to use in Match score analysis. DEFAULT: 30
+-regionThreshold      Percentage of all control samples differing more than 3
+                      standard deviations from mean coverage of a region in the specified
+                      BED file to exlude from sample ratio calculation. DEFAULT: 20
+-rmDup                Switch to enable duplicate removal when using BAM files as input.
+-sexChr               Switch to include sex chromosomes in analysis.
+-useSampleAsControl   Switch to use samples as control. Example: when using BAM
+                      files to create count files and subsequentially use the
+                      generated count files as controls.
+-ratioCutOffLow       Lower ratio cutoff value. Region ratio values below this
+                      threshold are marked as deletion. DEFAULT: 0.65
+-ratioCutOffHigh      Higher ratio cutoff value. Region ratio values above this
+                      threshold are marked as duplication. DEFAULT: 1.4
+-zScoreCutOffLow      Lower Z-score cutoff value. Regions with a Z-score below
+                      this threshold are marked as deletion. DEFAULT: -3
+-zScoreCutOffHigh     Higher Z-score cutoff value. Regions with a Z-score above
+                      this threshold are marked as duplication. DEFAULT: 3
+-sampleRatioScore     Sample ratio z-score cutoff value. Sample with a ratio
+                      score below this value are excluded from analysis. DEFAULT: 0.09
+-percentageLessReliableTargets        Target labelled as less reliable in percentage
+                      of control samples. DEFAULT: 20</pre>
+</div></div>
 <h2 id="create_normalized_count_files">Create normalized count files</h2>
 <p>The first step in the analysis is to create normalized count files. This can be done in two ways, from a bam file or from a text file including mean coverage per target.</p>
 <h3>StartWithBam</h3>
