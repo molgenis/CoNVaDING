@@ -2,10 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="generator" content="AsciiDoc 8.6.9, /Users/ljohansson/.asciidoc/backends/bootstrap/bootstrap-docs/bootstrap-docs backend">
+    <meta name="generator" content="AsciiDoc 8.6.9, /Users/freerkvandijk/.asciidoc/backends/bootstrap/bootstrap-docs/bootstrap-docs backend">
     <title>CoNVaDING User Guide</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="author" content="Lennart Johansson">
+    <meta name="author" content="Lennart Johansson &lt;l.johansson@umcg.nl&gt; &amp; Freerk van Dijk &lt;f.van.dijk02@umcg.nl&gt;">
     <style>
 /*!
  * Bootstrap v2.3.2
@@ -8874,6 +8874,7 @@ The <a id="X1"></a><a href="http://search.cpan.org/~mwendl/Statistics-Normality-
 </li>
 </ul>
 <p>After installation the samtools executable has to be added to your local environment using the $PATH variable.</p>
+<p>This version is known to be compatible with SAMtools version 0.1.18 and 0.1.19</p>
 </section>
 <section id="general_comments">
   <div class="page-header">
@@ -8890,66 +8891,81 @@ The <a id="X1"></a><a href="http://search.cpan.org/~mwendl/Statistics-Normality-
 <p>CoNVaDING can be started using the following command:</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>perl ./CoNVaDING-0.1.4.6.pl</pre>
+<pre>perl ./CoNVaDING-0.1.4.17.pl</pre>
 </div></div>
 <p>If no options are used the help menu will appear.</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>Usage: ./countCNV-v0.1.4.7.pl &lt;mode&gt; &lt;parameters&gt;
+<pre>Usage: ./countCNV-v0.1.4.17.pl &lt;mode&gt; &lt;parameters&gt;
 -h                    This manual.
 -mode                 Mode to run in, one of the following required:
-                StartWithBam :
-                   Start with BAM files as input, to enable duplicate
-                   removal use the rmdup variable.
-                        REQUIRED:
-                        [-inputDir, -outputDir, -bed, -controlsDir]
-                        OPTIONAL:
-                        [-rmDup, -useSampleAsControl]
-                 StartWithAvgCount :
-                    Start with Average Count files as input. This is a five column text file
-                    with predefined column names. Please read the manual for instructions.
-                        REQUIRED:
-                        [-inputDir, -outputDir, -bed, -controlsDir]
-                        OPTIONAL:
-                        [-useSampleAsControl]
-                 StartWithMatchScore :
-                     Start with Normalized Coverage files as input.
-                        REQUIRED:
-                        [-inputDir, -outputDir, -controlsDir]
-                        OPTIONAL:
-                        [-controlSamples, -sexChr]
-                 StartWithBestScore :
-                     Best score analysis using Match score files as input.
-                        REQUIRED:
-                        [-inputDir, -outputDir, -controlsDir]
-                        OPTIONAL:
-                        [-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh,
-                        -zScoreCutOffLow, -zScoreCutOffHigh]
+                      StartWithBam :
+                              Start with BAM files as input, to enable duplicate
+                              removal use the rmdup variable.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -bed, -controlsDir]
+                              OPTIONAL:
+                              [-rmDup, -useSampleAsControl]
+                      StartWithAvgCount :
+                              Start with Average Count files as input. This is a five column text file
+                              with predefined column names. Please read the manual for instructions.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -bed, -controlsDir]
+                              OPTIONAL:
+                              [-useSampleAsControl]
+                      StartWithMatchScore :
+                              Start with Normalized Coverage files as input.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-controlSamples, -sexChr]
+                      StartWithBestScore :
+                              Best score analysis using Match score files as input.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
+                      GenerateTargetQcList :
+                              Generate a target QC list to use as input for finallist creation.
+                              REQUIRED:
+                              [-inputDir, -outputDir, -controlsDir]
+                              OPTIONAL:
+                              [-controlSamples, -regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
+                      CreateFinalList :
+                              Creates the final list using the target QC list for filtering.
+                              REQUIRED:
+                              [-inputDir, -targetQcList, -outputDir]
+                              OPTIONAL:
+                              [-percentageLessReliableTargets]
 PARAMETERS:
--inputDir           Input directory, depending on the analysis mode this contains
-                    BAM, AvgCount, normalized coverage or match score files.
--bed                Input file specifying regions to analyze in BED format.
--outputDir          Output directory to write results to.
--controlsDir        Directory containing control samples.
--controlSamples     Number of samples to use in Match score analysis. DEFAULT: 30
--regionThreshold    Percentage of all control samples differing more than 3
-                    standard deviations from mean coverage of a region in the specified
-                    BED file to exlude from sample ratio calculation. DEFAULT: 20
--rmDup              Switch to enable duplicate removal when using BAM files as input.
--sexChr             Switch to include sex chromosomes in analysis.
--useSampleAsControl Switch to use samples as control. Example: when using BAM
-                    files to create count files and subsequentially use the
-                    generated count files as controls.
--ratioCutOffLow     Lower ratio cutoff value. Region ratio values below this
-                    threshold are marked as deletion. DEFAULT: 0.65
--ratioCutOffHigh    Higher ratio cutoff value. Region ratio values above this
-                    threshold are marked as duplication. DEFAULT: 1.4
--zScoreCutOffLow    Lower Z-score cutoff value. Regions with a Z-score below
-                    this threshold are marked as deletion. DEFAULT: -3
--zScoreCutOffHigh   Higher Z-score cutoff value. Regions with a Z-score above
-                    this threshold are marked as duplication. DEFAULT: 3</pre>
+-inputDir             Input directory, depending on the analysis mode this contains
+                      BAM, AvgCount, normalized coverage or match score files.
+-bed                  Input file specifying regions to analyze in BED format.
+-outputDir            Output directory to write results to.
+-controlsDir          Directory containing control samples.
+-targetQcList         Path to file containing target QC values.
+-controlSamples       Number of samples to use in Match score analysis. DEFAULT: 30
+-regionThreshold      Percentage of all control samples differing more than 3
+                      standard deviations from mean coverage of a region in the specified
+                      BED file to exlude from sample ratio calculation. DEFAULT: 20
+-rmDup                Switch to enable duplicate removal when using BAM files as input.
+-sexChr               Switch to include sex chromosomes in analysis.
+-useSampleAsControl   Switch to use samples as control. Example: when using BAM
+                      files to create count files and subsequentially use the
+                      generated count files as controls.
+-ratioCutOffLow       Lower ratio cutoff value. Region ratio values below this
+                      threshold are marked as deletion. DEFAULT: 0.65
+-ratioCutOffHigh      Higher ratio cutoff value. Region ratio values above this
+                      threshold are marked as duplication. DEFAULT: 1.4
+-zScoreCutOffLow      Lower Z-score cutoff value. Regions with a Z-score below
+                      this threshold are marked as deletion. DEFAULT: -3
+-zScoreCutOffHigh     Higher Z-score cutoff value. Regions with a Z-score above
+                      this threshold are marked as duplication. DEFAULT: 3
+-sampleRatioScore     Sample ratio z-score cutoff value. Sample with a ratio
+                      score below this value are excluded from analysis. DEFAULT: 0.09
+-percentageLessReliableTargets        Target labelled as less reliable in percentage
+                      of control samples. DEFAULT: 20</pre>
 </div></div>
-<p><span class="label label-note">Note</span> The StartWithAvgCount option is not yet functional</p>
 <h2 id="create_normalized_count_files">Create normalized count files</h2>
 <p>The first step in the analysis is to create normalized count files. This can be done in two ways, from a bam file or from a text file including mean coverage per target.</p>
 <h3>StartWithBam</h3>
@@ -8957,9 +8973,10 @@ PARAMETERS:
 <p>The basic analysis starts as follows:</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>perl ./CoNVaDING-0.1.4.6.pl \
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
 -mode StartWithBam \
 -inputDir /PATH/TO/INPUTDIR \
+-controlsDir /PATH/TO/CONTROLSDIR \
 -outputDir /PATH/TO/OUTPUTDIR \
 -bed /PATH/TO/DIR/target_bedfile.bed</pre>
 </div></div>
@@ -9030,14 +9047,13 @@ This enables the use of alternative analysis software.</p>
 <p>When this mode is used the analysis is started as follows:</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>perl ./CoNVaDING-0.1.4.6.pl \
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
 -mode StartWithAvgCount \
 -inputDir /PATH/TO/INPUTDIR \
 -outputDir /PATH/TO/OUTPUTDIR \
 -bed /PATH/TO/DIR/target_bedfile.bed</pre>
 </div></div>
-<p><span class="label label-note">Note</span> The software requires the input files to have the extension <strong>.txt</strong>
-Also here the following options can be used if the samples should be used as a control set in later steps:</p>
+<p>Also here the following options can be used if the samples should be used as a control set in later steps:</p>
 <div class="literalblock">
 <div class="content monospaced">
 <pre>-useSampleAsControl
@@ -9051,19 +9067,17 @@ Also here the following options can be used if the samples should be used as a c
 <p>The basic analysis starts as follows:</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>perl ./CoNVaDING-0.1.4.6.pl \
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
 -mode StartWithMatchScore \
 -inputDir /PATH/TO/INPUTDIR \
 -outputDir /PATH/TO/OUTPUTDIR \
--bed /PATH/TO/DIR/target_bedfile.bed \
 -controlsDir /PATH/TO/CONTROLSDIR</pre>
 </div></div>
 <p>The <em>inputDir</em> option should specify the path to the folder in which the normalized coverage files <strong>.aligned.only.normalized.coverage.txt</strong> are be stored (the outputfolder of the previous step).</p>
 <p>The <em>outputDir</em> option should specify the path to output folder. The script will produce two types of output files:</p>
-<p><strong>.best.match.score.txt</strong> show the paths to the selected control samples.</p>
+<p><strong>.best.match.score.txt</strong> shows the matchscore and the paths to the selected control samples.</p>
 <p><strong>.normalized.autosomal.coverage.all.controls.txt</strong> show the normalized coverage for all possible control samples</p>
-<p>The <em>bed</em> option should again point to the bed file.
-The <em>controlsDir</em> option should show the directory in which the control samples that have to be used are stored.</p>
+<p>The <em>controlsDir</em> option should show the directory in which the control samples that have to be used are stored.</p>
 <p>The analysis options can be further extended:</p>
 <p>On default only targets located on autosomal chromosomes will be analyzed. If some targets are located on the sex chromosomes the following option should be added:</p>
 <div class="literalblock">
@@ -9083,20 +9097,17 @@ The <em>controlsDir</em> option should show the directory in which the control s
 <p>The basic analysis starts as follows:</p>
 <div class="literalblock">
 <div class="content monospaced">
-<pre>perl ./CoNVaDING-0.1.4.6.pl \
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
 -mode StartWithBestScore \
 -inputDir /PATH/TO/INPUTDIR \
 -outputDir /PATH/TO/OUTPUTDIR \
--bed /PATH/TO/DIR/target_bedfile.bed \
 -controlsDir /PATH/TO/CONTROLSDIR</pre>
 </div></div>
-<p><span class="label label-note">Note</span> The <strong>-bed</strong> and <strong>-controlsDir</strong> parameter are required but currently not used. They will be used in future versions.</p>
 <p>The <em>inputDir</em> option should specify the path to the folder in which the <strong>.best.match.score.txt</strong> files are stored (the outputfolder of the previous step).</p>
-<p>The <em>outputDir</em> option should specify the path to output folder. The script will produce six types of output files:</p>
+<p>The <em>outputDir</em> option should specify the path to output folder. The script will produce four types of output files:</p>
 <p><strong>.best.score.log</strong> show the used control samples, the sample ratio score and the omitted regions for the sample ratio score calculation.</p>
 <p><strong>.best.score.longlist.txt</strong> contains all calls, regardless of the target quality</p>
 <p><strong>.best.score.shortlist.txt</strong> contains the high quality calls based on within sample target QC</p>
-<p><strong>.best.score.finallist.txt</strong> contains the high quality calls based on within and between sample target QC</p>
 <p><strong>.best.score.totallist.txt</strong> contains information about all targets (ratio scores, Z-scores, QC)</p>
 <p>The analysis options can be further extended:</p>
 <p>The sample ratio calculation is based on calculation the variation coefficient of the normalized targets of the sample of interest. In this calculation highly variable targets are excluded. On default a target is considered highly variable if after transforming the normalized target ratio&#8217;s of all samples in the possible control group 20 percent or more of the samples have a Z-score outside the -3 to 3 range. This percentage can be altered using the <em>regionTreshold</em> option.
@@ -9105,6 +9116,49 @@ For a threshold of 30 percent of the samples for instance the following option c
 <div class="content monospaced">
 <pre>-regionThreshold 30</pre>
 </div></div>
+<p>To alter the ratio thresholds when making a call for a deletion of duplication for a region during the analysis, the ratioCutOffLow and ratioCutOffHigh parameters can be used.
+To apply a threshold of ratio score below 0.65 for a deletion and above 1.4 for duplication use:</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>-ratioCutOffLow 0.65
+-ratioCutOffHigh 1.4</pre>
+</div></div>
+<p>The same thresholds for calling a deletion or duplication can also be applied using the Z-score value cutoff.
+To call a deletion when the Z-score is below -3 or duplication when the Z-score is above 3 use:</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>-zScoreCutOffLow -3
+-zScoreCutOffHigh 3</pre>
+</div></div>
+<p>To finetune the variant list one can generate a list of targets which in general are of lower quality in all possible controlsamples and apply this as a filter to generate a final list of high quality calls. This can be done by executing two steps:</p>
+<h3>GenerateTargetQcList</h3>
+<p>To generate the list of targets and corresponding quality thresholds run:</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
+-mode GenerateTargetQcList \
+-inputDir /PATH/TO/CONTROLSDIR \
+-outputDir /PATH/TO/OUTPUTDIR \
+-controlsDir /PATH/TO/CONTROLSDIR</pre>
+</div></div>
+<p>For this analysis, the same region threshold, ratio cutoffs and Z-score cutoffs as explained above can be altered using their corresponding parameters.</p>
+<h3>CreateFinalList</h3>
+<p>To apply the generated list of sample target QCs to the <strong>.best.score.shortlist.txt</strong> files execute:</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>perl ./CoNVaDING-0.1.4.17.pl \
+-mode CreateFinalList \
+-inputDir /PATH/TO/BESTSCOREOUTPUT \
+-targetQcList /PATH/TO/TARGETQCLISTFILE \
+-outputDir /PATH/TO/OUTPUTDIR</pre>
+</div></div>
+<p>To change the percentage of samples in which a target can be labelled as less reliabe, for example in 20 percent of the samples, use the option:</p>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>-percentageLessReliableTargets 20</pre>
+</div></div>
+<p>This produces the following output file:</p>
+<p><strong>.finallist.txt</strong> contains all final calls, basically a filtered shortlist file.</p>
 </section>
 <section id="test_dataset">
   <div class="page-header">
