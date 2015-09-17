@@ -12,7 +12,7 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "v0.1.4.17";
+my $version = "1.1.6";
 
 ##############################################################################################
 ##############################################################################################
@@ -2344,7 +2344,10 @@ Please make sure you have the samtools executable added to your local environmen
 
 For questions please e-mail: f.van.dijk02\@umcg.nl or l.johansson\@umcg.nl
 #########################################################################################################
-Usage: ./countCNV-$version.pl <mode> <parameters>
+
+CoNVaDING software version $version
+
+Usage: ./CoNVaDING.pl <mode> <parameters>
 -h\t\t\tThis manual.
 -mode\t\t\tMode to run in, one of the following required:
 \t\t\tStartWithBam :
