@@ -408,7 +408,7 @@ if ($mode eq "StartWithBam"){
     #Extract sampleratio from *.log file
 
     print "\n#######################################\n";
-    print "\n\nSamples failing sample ratio threshold of $sampleRatioScore:\n\n";
+    print "\n\nSamples failing sample CV threshold of $sampleRatioScore:\n\n";
     
     
     foreach my $logfile (@logfiles){
@@ -420,7 +420,7 @@ if ($mode eq "StartWithBam"){
                 $logfile =~ s/.log/.totallist.txt/gs; #Change *.log extension to *.totallist.txt
                 push(@passSampleRatioSamples, "$inputdir/$logfile");
             }else{
-                #Print samples failing sample ratio score to stdout
+                #Print samples failing sample CV score to stdout
                 print "$logfile\n";
             }
         }
@@ -1098,7 +1098,7 @@ sub startWithBestScore{
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
         undeff($outputToWrite);
         
-        #Write sample ratio score to log file in output directory
+        #Write sample CV score to log file in output directory
         $outputfile = "$outputdir/$outputPostfixRemoved.best.score.log"; #Output filename
         my $lastLineIdx = $#inputfile;
         $header = uc($inputfile[0]); #Header in uppercase
@@ -1156,7 +1156,7 @@ sub startWithBestScore{
                 $percentageFail = (($covFail/$covPass) * 100);
             }
             if ($percentageFail >= $regionThreshold) {
-                #Fail, don't count in sample ratio
+                #Fail, don't count in sample CV
                 #Remove this region from sampleRatio array
                 my $idxToRm = ($i-1); #Subtract 1, since header is missing now
                 $failedRegionsToWrite .= "$region\n";
@@ -1166,7 +1166,7 @@ sub startWithBestScore{
         }
         my @calcSampleRatio;
         foreach my $idxKeep (@idxToKeep){ #Iterate over indices to keep
-            push(@calcSampleRatio, $sampleRatio[$idxKeep]); #Push sample ratios to calculate mean and sd on into new array
+            push(@calcSampleRatio, $sampleRatio[$idxKeep]); #Push sample CVs to calculate mean and sd on into new array
         }
         undef(@sampleRatio);
         #Select 95% samples (exclude low and high) for sampleRatio calculation
@@ -1179,10 +1179,10 @@ sub startWithBestScore{
         #Calculate mean average best match score over all control samples
         calcMeanSD(\@avgBestMatchScores);
         my $meanAvgBestMatchScore = $mean;
-        #Calculate sample ratio
+        #Calculate sample CV
         calcMeanSD(\@sliceNormVal); #Calculate mean and sd
         my $sampleRatio = ($sd/$mean);
-        $lin = "\n\nSAMPLE_CV: $sampleRatio\nMEAN_AVERAGE_BEST_MATCHSCORE: $meanAvgBestMatchScore\n"; #Add mean average best match score and sample ratio to output logfile
+        $lin = "\n\nSAMPLE_CV: $sampleRatio\nMEAN_AVERAGE_BEST_MATCHSCORE: $meanAvgBestMatchScore\n"; #Add mean average best match score and sample CV to output logfile
         $outputToWrite .= $lin;
         $outputToWrite .= $failedRegionsToWrite; #Add failed regions to output logfile
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
@@ -2560,7 +2560,7 @@ PARAMETERS:
 
 -regionThreshold\tPercentage of all control samples differing more than 3
 \t\t\tstandard deviations from mean coverage of a region in the specified
-\t\t\tBED file to exlude from sample ratio calculation. DEFAULT: 20
+\t\t\tBED file to exlude from sample CV calculation. DEFAULT: 20
 
 -rmDup\t\t\tSwitch to enable duplicate removal when using BAM files as input.
 
@@ -2582,8 +2582,9 @@ PARAMETERS:
 -zScoreCutOffHigh\tHigher Z-score cutoff value. Regions with a Z-score above
 \t\t\tthis threshold are marked as duplication. DEFAULT: 3
 
--sampleRatioScore\tSample ratio z-score cutoff value. Sample with a ratio
+-sampleRatioScore\tSample CV z-score cutoff value. Sample with a ratio
 \t\t\tscore below this value are excluded from analysis. DEFAULT: 0.09
+\t\t\tNOTE: this variable now is named "Sample CV" in all outputs!
 
 -percentageLessReliableTargets\tTarget labelled as less reliable in percentage
 \t\t\tof control samples. DEFAULT: 20
