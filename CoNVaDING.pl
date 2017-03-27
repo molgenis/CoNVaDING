@@ -11,8 +11,15 @@ use POSIX qw(ceil);
 use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 
+print "\n#######################################\n";
+print "COMMANDLINE OPTIONS IN AFFECT:\n";
+foreach my $par (@ARGV){
+    print "$par\n";
+}
+print "#######################################\n";
+
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "1.1.6";
+my $version = "1.2.0";
 
 ##############################################################################################
 ##############################################################################################
@@ -43,7 +50,7 @@ my ($help, $mode, $inputdir, $controlsdir, $outputdir, $bedfile, $rmdup, $sexchr
 GetOptions(
                 "h"                     => \$help,
                 "mode=s"                => \$mode, #For options, see list below (default="StartWithBam")
-                "inputDir=s"            => \$inputdir,
+                "inputDir:s"            => \$inputdir, #optional
                 "controlsDir:s"         => \$controlsdir, #optional
                 "outputDir=s"           => \$outputdir,
                 "bed:s"                 => \$bedfile, #optional
@@ -63,7 +70,6 @@ GetOptions(
 usage() and exit(1) if $help;
 #Obligatory args
 usage() and exit(1) unless $mode;
-usage() and exit(1) unless $inputdir;
 usage() and exit(1) unless $outputdir;
 #Add more parameters later
 
@@ -124,6 +130,15 @@ if ($mode eq "GenerateTargetQcList"){
     }
     if (not defined $sampleRatioScore) {
         $sampleRatioScore = 0.09;
+    }
+    #Set inputdir to same value as controlsdir
+    $inputdir = $controlsdir;
+}
+
+#Check if input directory exists, otherwise error and die
+if ($mode eq "StartWithBam" || $mode eq "StartWithAvgCount" || $mode eq "StartWithMatchScore" || $mode eq "StartWithBestScore" || $mode eq "CreateFinalList"){
+    if (not defined $inputdir) { #Throw error when inputdir is not specified
+        die "Directory for input samples (-inputDir) is not specified, please specify to continue analysis.\n";
     }
 }
 
@@ -342,7 +357,7 @@ if ($mode eq "StartWithBam"){
     #Read count TXT files
     print "Reading controls directory..\n";
     #Read all *.txt files in control directory into array
-    $extension = ".txt";
+    $extension = ".normalized.coverage.txt";
     readFile($controlsdir, $extension); #Read files in controls directory
     my @controlfiles = @inputfiles;
     undeff(@inputfiles);
@@ -393,19 +408,19 @@ if ($mode eq "StartWithBam"){
     #Extract sampleratio from *.log file
 
     print "\n#######################################\n";
-    print "\n\nSamples failing sample ratio threshold of $sampleRatioScore:\n\n";
+    print "\n\nSamples failing sample CV threshold of $sampleRatioScore:\n\n";
     
     
     foreach my $logfile (@logfiles){
-        my $grep = `grep SAMPLE_RATIO: $inputdir/$logfile`;
+        my $grep = `grep SAMPLE_CV: $inputdir/$logfile`;
         chomp $grep;
-        if ($grep =~ m/SAMPLE_RATIO: ([0-9].+)/gs){ #Check if sampleratio is below threshold(default 0.09), otherwise don't use it in targetlist analysis
+        if ($grep =~ m/SAMPLE_CV: ([0-9].+)/gs){ #Check if sampleratio is below threshold(default 0.09), otherwise don't use it in targetlist analysis
             my $sampleRatio = $1;
             if ($sampleRatio <= $sampleRatioScore) {
                 $logfile =~ s/.log/.totallist.txt/gs; #Change *.log extension to *.totallist.txt
                 push(@passSampleRatioSamples, "$inputdir/$logfile");
             }else{
-                #Print samples failing sample ratio score to stdout
+                #Print samples failing sample CV score to stdout
                 print "$logfile\n";
             }
         }
@@ -525,6 +540,7 @@ sub createFinalList{
         my $dir;
         my $ext;
         ($file,$dir,$ext) = fileparse($shortlist, qr/\.[^.]*/);
+        $file =~ s/.shortlist//gs;
         open(FILE, "$inputdir/$shortlist") or die("Unable to open file: $!"); #Read count file
         my @file= <FILE>;
         close(FILE);
@@ -1082,7 +1098,7 @@ sub startWithBestScore{
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
         undeff($outputToWrite);
         
-        #Write sample ratio score to log file in output directory
+        #Write sample CV score to log file in output directory
         $outputfile = "$outputdir/$outputPostfixRemoved.best.score.log"; #Output filename
         my $lastLineIdx = $#inputfile;
         $header = uc($inputfile[0]); #Header in uppercase
@@ -1102,7 +1118,7 @@ sub startWithBestScore{
         }
         
         ######
-        my $failedRegionsToWrite = "\n\n###REGIONS FAILING USER SPECIFIED QUALITY THRESHOLD OF $regionThreshold PERCENT###\n###THESE REGIONS ARE OMMITTED FROM SAMPLE_RATIO CALCULATION###\n";
+        my $failedRegionsToWrite = "\n\n###REGIONS FAILING USER SPECIFIED QUALITY THRESHOLD OF $regionThreshold PERCENT###\n###THESE REGIONS ARE OMMITTED FROM SAMPLE_CV CALCULATION###\n";
         my $lastLin=$#normautofile; #lastlineIdx of file
         my @idxToKeep;
         for (my $i=1; $i<=$lastLin; $i++){ #Loop through norm auto file
@@ -1140,7 +1156,7 @@ sub startWithBestScore{
                 $percentageFail = (($covFail/$covPass) * 100);
             }
             if ($percentageFail >= $regionThreshold) {
-                #Fail, don't count in sample ratio
+                #Fail, don't count in sample CV
                 #Remove this region from sampleRatio array
                 my $idxToRm = ($i-1); #Subtract 1, since header is missing now
                 $failedRegionsToWrite .= "$region\n";
@@ -1150,7 +1166,7 @@ sub startWithBestScore{
         }
         my @calcSampleRatio;
         foreach my $idxKeep (@idxToKeep){ #Iterate over indices to keep
-            push(@calcSampleRatio, $sampleRatio[$idxKeep]); #Push sample ratios to calculate mean and sd on into new array
+            push(@calcSampleRatio, $sampleRatio[$idxKeep]); #Push sample CVs to calculate mean and sd on into new array
         }
         undef(@sampleRatio);
         #Select 95% samples (exclude low and high) for sampleRatio calculation
@@ -1163,14 +1179,14 @@ sub startWithBestScore{
         #Calculate mean average best match score over all control samples
         calcMeanSD(\@avgBestMatchScores);
         my $meanAvgBestMatchScore = $mean;
-        #Calculate sample ratio
+        #Calculate sample CV
         calcMeanSD(\@sliceNormVal); #Calculate mean and sd
         my $sampleRatio = ($sd/$mean);
-        $lin = "\n\nSAMPLE_RATIO: $sampleRatio\nMEAN_AVERAGE_BEST_MATCHSCORE: $meanAvgBestMatchScore\n"; #Add mean average best match score and sample ratio to output logfile
+        $lin = "\n\nSAMPLE_CV: $sampleRatio\nMEAN_AVERAGE_BEST_MATCHSCORE: $meanAvgBestMatchScore\n"; #Add mean average best match score and sample CV to output logfile
         $outputToWrite .= $lin;
         $outputToWrite .= $failedRegionsToWrite; #Add failed regions to output logfile
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
-        print "Sample ratio: $sampleRatio\n";
+        print "Sample CV: $sampleRatio\n";
         print "Mean average best match score of all control samples: $meanAvgBestMatchScore\n";
         print "#######################################\n\n";
         
@@ -1568,11 +1584,14 @@ sub createOutputLists{
     my $shapPassCount = 0;
     my $highQualAbberationCount = 0;
     my @chrStarts;
+    my $abberationCountHOM = 0;
+    my $shapPassCountHOM = 0;
+    my $highQualAbberationCountHOM = 0;
     for (my $m=0; $m <= $lastTargetIdx; $m++){ #Iterate over targets
         my $chr;
         my $start;
         my $stop;
-        my $target = $arrayRefs[0][$m];
+        my $target = $arrayRefs[0][$m]; #Extract current target
         $target =~ s/:/\t/g;
         $target =~ s/-/\t/g;
         $target =~ s/^23/X/gs;
@@ -1600,7 +1619,7 @@ sub createOutputLists{
             $start = $array[1];
             $stop = $array[2];
             if ($abberationCount == 0) {
-                $outputLongToWrite .= "$chr\t$start\t"; #Write event chr and start
+                #$outputLongToWrite .= "$chr\t$start\t"; #Write event chr and start
             }
             push(@chrStarts, $chr);
             push(@chrStarts, $start);
@@ -1611,17 +1630,33 @@ sub createOutputLists{
             if ($shap >= 0.05){
                 $shapPassCount++;
             }
+            
+            $nextAbberation =~ s/HOM_//gs;
+            $abberation =~ s/HOM_//gs;
+            
             if ($abberation eq $nextAbberation && $gene eq $nextGene){ #If next abberation is DEL or DUP within same gene, same event extended
                 $abberationCount++;
             }else { #Not the same event anymore, write away stop position, gene and abberation
                 my $abberationCountToPrint = ($abberationCount+1);
-                $outputLongToWrite .= "$stop\t$gene\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write event end and details away
+                
+                #Retrieve first start to print from previous event
+                my $targetPrev = $arrayRefs[0][$m-$abberationCount];
+                $targetPrev =~ s/:/\t/g;
+                $targetPrev =~ s/-/\t/g;
+                $targetPrev =~ s/^23/X/gs;
+                $targetPrev =~ s/^24/Y/gs;
+                $targetPrev =~ s/^25/MT/gs;
+                #Extract chr and start position from target
+                my @arrayPrev = split("\t", $targetPrev);
+                my $chrPrev = $arrayPrev[0];
+                my $startPrev = $arrayPrev[1];
+                
+                #Write the previous chr and startPos to output
+                $outputLongToWrite .= "$chrPrev\t$startPrev\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write event end and details away
                 if ($highQualAbberationCount > 0) { #If total abberation counts is equal to high quality calls all target of an abberation are PASS, so the event can be written to the shortlist
                     if ($abberationCount == 0 ) {
                         $outputShortToWrite .= "$chr\t$start"; #Write event chr and start
                     }else{
-                        #push(@chrStarts, $chr);
-                        #push(@chrStarts, $start);
                         $outputShortToWrite .= $chrStarts[0] . "\t" . $chrStarts[1];
                     }
                     $outputShortToWrite .= "\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write high quality events
@@ -1636,6 +1671,84 @@ sub createOutputLists{
             undef(@chrStarts); undef($chr); undef($start); undef($stop);
             $abberationCount = 0; #Reset $abberationCount to 0
             $shapPassCount = 0;
+        }
+
+        #Perform second iteration to also write Homozygous events to output
+        $target = $arrayRefs[0][$m];
+        $target =~ s/:/\t/g;
+        $target =~ s/-/\t/g;
+        $target =~ s/^23/X/gs;
+        $target =~ s/^24/Y/gs;
+        $target =~ s/^25/MT/gs;
+        $gene = $arrayRefs[1][$m];
+        $vals = $arrayRefs[2][$m];
+        $vals =~ s/&&/\t/g;
+        $abberation = $arrayRefs[3][$m];
+        $quality = $arrayRefs[4][$m];
+        $shap = $arrayRefs[6][$m];
+        @array = split("\t", $target);
+        if ($abberation eq "HOM_DEL" || $abberation eq "HOM_DUP") { #If abberation detected, check next abberation, afterwards write to longlist file
+            my $nextAbberation = $arrayRefs[3][$m+1];
+            my $nextGene = $arrayRefs[1][$m+1];
+            if ($m == $lastTargetIdx){
+                $nextAbberation = "LAST";
+                $nextGene = "LAST";
+            }
+            
+            #Extract chr and start position from target
+            my @array = split("\t", $target);
+            $chr = $array[0];
+            $start = $array[1];
+            $stop = $array[2];
+            if ($abberationCountHOM == 0) {
+                #$outputLongToWrite .= "$chr\t$start\t"; #Write event chr and start
+            }
+            push(@chrStarts, $chr);
+            push(@chrStarts, $start);
+            if ($quality eq ".") { #If abberation is not filtered out due to low quality autoVC or failing gene low quality, push into shortlist
+                $highQualAbberationCountHOM++; #Increase number of high quality abberation counts
+            }
+            #Count number of targets passing shapiro-wilk test
+            if ($shap >= 0.05){
+                $shapPassCountHOM++;
+            }
+            
+            if ($abberation eq $nextAbberation && $gene eq $nextGene){ #If next abberation is DEL or DUP within same gene, same event extended
+                $abberationCountHOM++;
+            }else { #Not the same event anymore, write away stop position, gene and abberation
+                my $abberationCountToPrint = ($abberationCountHOM+1);
+                #Retrieve first start to print for event
+                $target = $arrayRefs[0][$m-$abberationCountHOM];
+                $target =~ s/:/\t/g;
+                $target =~ s/-/\t/g;
+                $target =~ s/^23/X/gs;
+                $target =~ s/^24/Y/gs;
+                $target =~ s/^25/MT/gs;
+                #Extract chr and start position from target
+                my @array = split("\t", $target);
+                $chr = $array[0];
+                $start = $array[1];
+                $outputLongToWrite .= "$chr\t$start\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCountHOM\t$abberation\n"; #Write event end and details away
+                if ($highQualAbberationCountHOM > 0) { #If total abberation counts is equal to high quality calls all target of an abberation are PASS, so the event can be written to the shortlist
+                    if ($abberationCountHOM == 0 ) {
+                        #$outputShortToWrite .= "$chr\t$start"; #Write event chr and start
+                    }else{
+                        #push(@chrStarts, $chr);
+                        #push(@chrStarts, $start);
+                        #$outputShortToWrite .= $chrStarts[0] . "\t" . $chrStarts[1];
+                    }
+                    $outputShortToWrite .= "$chr\t$start\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCountHOM\t$abberation\n"; #Write high quality events
+                }
+                $abberationCountHOM = 0; #Reset $abberationCount to 0
+                $shapPassCountHOM = 0;
+                $highQualAbberationCountHOM = 0; #Reset $highQualAbberationCount to 0
+                undef(@chrStarts); undef($chr); undef($start); undef($stop);
+            }
+        }else{
+            #Undef chr, start array and variables
+            undef(@chrStarts); undef($chr); undef($start); undef($stop);
+            $abberationCountHOM = 0; #Reset $abberationCount to 0
+            $shapPassCountHOM = 0;
         }
     }
     writeOutput($outputfileTotal, $outputTotalToWrite); #Write output to above specified file
@@ -1916,7 +2029,11 @@ sub createNormalizedCoverageFiles {
         my $normsexSample=$linesSample[$normSexIdxSample];
         
         #Change parameter name later, since the selection for total or autosomal only is made earlier
-        $normAutoToWrite .= "$chrSample:$startSample\-$stopSample\t$normautoSample\n";
+        if (defined $sexchr) {
+            $normAutoToWrite .= "$chrSample:$startSample\-$stopSample\t$normsexSample\n";
+        } else{
+           $normAutoToWrite .= "$chrSample:$startSample\-$stopSample\t$normautoSample\n"; 
+        }
     }
     writeOutput($normautofile, $normAutoToWrite); #Write output to above specified file
     
@@ -2004,7 +2121,11 @@ sub createNormalizedCoverageFiles {
                     $existingLine =~ s/^25/MT/gs;
                     chomp $existingLine;
                     #Change this parameter name later, since distinction between autosomal or total is made earlier
-                    $normAutoToWrite .= "$existingLine\t$normautoControl\n"; #concatenate full generated line to files
+                    if (defined $sexchr) {
+                        $normAutoToWrite .= "$existingLine\t$normsexControl\n"; #concatenate full generated line to files
+                    } else{
+                        $normAutoToWrite .= "$existingLine\t$normautoControl\n"; #concatenate full generated line to files
+                    }
                 }
                 #Remove 5% highest values (biggest abs diff) from calculation
                 #Determine how many elements to remove from array using 5% highest values
@@ -2017,7 +2138,7 @@ sub createNormalizedCoverageFiles {
                 splice(@sortedSex, 0, $numRemove);
                 #Calculate avg abs diff per target/region
                 my $sumAuto = sum(@sortedAuto);
-                my $sumSex = sum(@sortedAuto);
+                my $sumSex = sum(@sortedSex);
                 my $numAuto = scalar(@sortedAuto);
                 my $numSex = scalar(@sortedSex);
                 my $avgDiffAuto = ($sumAuto/$numAuto);
@@ -2126,7 +2247,33 @@ sub countFromBam {
     open (BED, "<$bedfile") or die "Cannot open file: $bedfile\n";
     @bedfile = <BED>;
     close(BED);
-
+    
+    #Check if style of regions in BED file is normal or UCSC (so incl. "chr" in chromosomename)
+    my $firstLine = $bedfile[0];
+    $firstLine =~ s/(?>\x0D\x0A?|[\x0A-\x0C\x85\x{2028}\x{2029}])//; #Remove Unix and Dos style line endings
+    my $bedStyleUCSC = "FALSE";
+    if ($firstLine =~ m/^chr.+/gs) { #Line starts with chr, so UCSC style
+        $bedStyleUCSC = "TRUE";
+    }
+    
+    #Extract header from BAM file and check chromosomename style
+    my $bamStyleUCSC = "FALSE";
+    my $retrieveBamHeader = "samtools view -H $bam";
+    my $bamHeader = `$retrieveBamHeader`;
+    my @bamHeaderLines = split("\n", $bamHeader);
+    my $bamFirstChr = $bamHeaderLines[1];
+    if ($bamFirstChr =~ m/^\@SQ\tSN:(.+)\tLN:.+/gs) {
+        my $chr = $1;
+        if ($chr =~ m/chr.+/gs) {
+            $bamStyleUCSC = "TRUE";
+        }
+    }
+    
+    #Check if bam chromosomenames do correspond to BED file chromosomenames
+    if ($bedStyleUCSC ne $bamStyleUCSC) {
+        die "Chromosome name style in BED file does not correspond to naming style in BAM file. This is probably caused by using UCSC naming style in one file, and other naming style in the other file. Please fix your BED or BAM file chromosome naming.\n";
+    }
+    
     foreach $line (@bedfile){
         $line =~ s/(?>\x0D\x0A?|[\x0A-\x0C\x85\x{2028}\x{2029}])//; #Remove Unix and Dos style line endings
         chomp $line;
@@ -2136,7 +2283,7 @@ sub countFromBam {
             $start=$array[1];
             $stop=$array[2];
             $gene=$array[3];
-            my $extractcov = "samtools depth -r $chr:$start-$stop -q 0 -Q 0 $bam | awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
+            my $extractcov = "samtools depth -r $chr:$start-$stop -a -q 0 -Q 0 $bam | awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
             $regioncov = `$extractcov`;
             chomp $regioncov;
             if (defined $regioncov and length $regioncov) { #Check for empty variable, if true set coverage to 0
@@ -2144,6 +2291,7 @@ sub countFromBam {
             }else{
                 $regioncov = 0;
             }
+            $regioncov =~ s/-nan/0/gs;
             calcGeneCov($chr, $start, $stop, $gene, $regioncov, $line); #Calculate coverage per region
         }else{
             print "Incorrect BED file format, please check your BED file before processing.\n";
@@ -2186,6 +2334,7 @@ sub countFromBam {
 #Calculate coverage per region
 sub calcGeneCov {
     $chr = shift;
+    $chr =~ s/chr//gs; #Remove "chr" from chromosomes
     $start = shift;
     $stop = shift;
     $gene = shift;
@@ -2378,12 +2527,12 @@ Usage: ./CoNVaDING.pl <mode> <parameters>
 \t\t\t\tREQUIRED:
 \t\t\t\t[-inputDir, -outputDir, -controlsDir]
 \t\t\t\tOPTIONAL:
-\t\t\t\t[-regionThreshold, -sexChr, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
+\t\t\t\t[-regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh]
 
 \t\t\tGenerateTargetQcList :
 \t\t\t\tGenerate a target QC list to use as input for finallist creation.
 \t\t\t\tREQUIRED:
-\t\t\t\t[-inputDir, -outputDir, -controlsDir]
+\t\t\t\t[-outputDir, -controlsDir]
 \t\t\t\tOPTIONAL:
 \t\t\t\t[-controlSamples, -regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
 
@@ -2411,7 +2560,7 @@ PARAMETERS:
 
 -regionThreshold\tPercentage of all control samples differing more than 3
 \t\t\tstandard deviations from mean coverage of a region in the specified
-\t\t\tBED file to exlude from sample ratio calculation. DEFAULT: 20
+\t\t\tBED file to exlude from sample CV calculation. DEFAULT: 20
 
 -rmDup\t\t\tSwitch to enable duplicate removal when using BAM files as input.
 
@@ -2433,8 +2582,9 @@ PARAMETERS:
 -zScoreCutOffHigh\tHigher Z-score cutoff value. Regions with a Z-score above
 \t\t\tthis threshold are marked as duplication. DEFAULT: 3
 
--sampleRatioScore\tSample ratio z-score cutoff value. Sample with a ratio
+-sampleRatioScore\tSample CV z-score cutoff value. Sample with a ratio
 \t\t\tscore below this value are excluded from analysis. DEFAULT: 0.09
+\t\t\tNOTE: this variable now is named "Sample CV" in all outputs!
 
 -percentageLessReliableTargets\tTarget labelled as less reliable in percentage
 \t\t\tof control samples. DEFAULT: 20
