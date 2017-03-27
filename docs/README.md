@@ -375,6 +375,7 @@ This produces the following output file:
 *.finallist.txt* contains all final calls, basically a filtered shortlist file.
 
 
+
 # Test dataset
 
 A test dataset can be downloaded from [here](https://github.com/molgenis/CoNVaDING/tree/master/Test_dataset).
@@ -600,6 +601,7 @@ The target ratio is also used to filter calls for the shortlist. Both QC metrics
 Sample CV: 0.09
 
 Target CV: 0.10
+
 
 
 #FAQ
