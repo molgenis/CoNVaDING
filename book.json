@@ -6,8 +6,7 @@
     "prism",
     "-fontsettings",
     "-highlight",
-    "github",
-    "versions"
+    "github"
   ],
   "pluginsConfig": {
     "edit-link": {
