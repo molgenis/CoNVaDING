@@ -1,2 +1,3 @@
 - [CoNVaDING](./README.md)
+	-[Analysis](./README.md#Analysis)
 - [Releases](https://github.com/molgenis/CoNVaDING/releases)
