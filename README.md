@@ -2,10 +2,10 @@
 Copy Number Variation Detection In Next-generation sequencing Gene panels was designed for small (single-exon) copy number variation (CNV) detection in high coverage next-generation sequencing (NGS) data
 
 
-The documentation can be found here:
+The documentation for version 1.2.0 can be found here:
 
-http://molgenis.github.io/software/CoNVaDING
+https://molgenis.gitbooks.io/convading/
 
-or
+For documentation on version 1.1.6 please refer to:
 
 http://molgenis.github.io/CoNVaDING/
