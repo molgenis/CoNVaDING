@@ -1,6 +1,6 @@
 # CoNVaDING User Guide
 
-Written for release CoNVaDING v1.2.0
+Written for release CoNVaDING v1.2.1
 
 
 # Introduction
