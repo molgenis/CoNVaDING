@@ -634,7 +634,7 @@ All the targets on the X chromosome are of low quality.
 
 - Make sure all control samples are of the same gender. 
 
-When settig the -zScoreCutOffLow parameter on X I get 'Unknown option :X'
+When setting the -zScoreCutOffLow parameter on X I get 'Unknown option :X'
 
 - If the parameteres in the print to the screen are set correctly the output is correct. However, to prevent the error message instead of a space use an = sign to connect the variable. For instance:\
 
