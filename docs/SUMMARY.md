@@ -9,7 +9,7 @@
 	* [Test dataset](./README.md#test-dataset)
 	* [QC Thresholds](./README.md#qc-thresholds)
 	* [FAQ](./README.md#faq)
-	* [Changelog](./README.md#changelog-v1.2.0)
+	* [Changelog](./README.md#changelog)
 	* [Literature](./README.md#literature)
 	* [Tutorial](./README.md#tutorial)
 	* [Contact](./README.md#contact)

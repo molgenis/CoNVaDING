@@ -1,6 +1,6 @@
 # CoNVaDING User Guide
 
-Written for release CoNVaDING v1.2.0
+Written for release CoNVaDING v1.2.1
 
 
 # Introduction
@@ -69,7 +69,7 @@ If no options are used the help menu will appear.
   				[-inputDir, -outputDir, -bed, -controlsDir]
   				OPTIONAL:
   				[-rmDup, -useSampleAsControl]
-  			StartWithAvgCount :
+  			  			StartWithAvgCount :
   				Start with Average Count files as input. This is a five column text file
   				with predefined column names. Please read the manual for instructions.
   				REQUIRED:
@@ -110,7 +110,7 @@ If no options are used the help menu will appear.
   -controlSamples       Number of samples to use in Match score analysis. DEFAULT: 30
   -regionThreshold      Percentage of all control samples differing more than 3
                         standard deviations from mean coverage of a region in the specified
-                        BED file to exlude from sample ratio calculation. DEFAULT: 20
+                        BED file to exlude from sample CV calculation. DEFAULT: 20
   -rmDup                Switch to enable duplicate removal when using BAM files as input.
   -sexChr               Switch to include sex chromosomes in analysis.
   -useSampleAsControl   Switch to use samples as control. Example: when using BAM
@@ -124,8 +124,8 @@ If no options are used the help menu will appear.
                         this threshold are marked as deletion. DEFAULT: -3
   -zScoreCutOffHigh     Higher Z-score cutoff value. Regions with a Z-score above
                         this threshold are marked as duplication. DEFAULT: 3
-  -sampleRatioScore     Sample ratio z-score cutoff value. Sample with a ratio
-                        score below this value are excluded from analysis. DEFAULT: 0.09
+  -sampleRatioScore     Sample CV z-score cutoff value. Sample with a ratio
+                        score below this value are excluded from analysis. DEFAULT: 0.09. NOTE: this variable now is named "SAMPLE CV" in all outputs!
   -percentageLessReliableTargets	Target labelled as less reliable in percentage
                         of control samples. DEFAULT: 20
 ```
@@ -334,10 +334,11 @@ To apply a threshold of ratio score below 0.65 for a deletion and above 1.4 for 
 The same thresholds for calling a deletion or duplication can also be applied using the Z-score value cutoff.
 To call a deletion when the Z-score is below -3 or duplication when the Z-score is above 3 use:
 ```bash
-  -zScoreCutOffLow -3
+  -zScoreCutOffLow=-3
   -zScoreCutOffHigh 3
 ```
 
+Note that to use the minus variable in the -zScoreCutOffLow an '=' sign is needed instead of a space.
 
 To finetune the variant list one can generate a list of targets which in general are of lower quality in all possible controlsamples and apply this as a filter to generate a final list of high quality calls. This can be done by executing two steps:
 
@@ -373,7 +374,6 @@ To change the percentage of samples in which a target can be labelled as less re
 This produces the following output file:
 
 *.finallist.txt* contains all final calls, basically a filtered shortlist file.
-
 
 
 # Test dataset
@@ -501,15 +501,15 @@ The totallist contains the information of all targets and shows the ratio's and 
 *Sample1.average.counts.best.score.totallist.txt*
 ```bash
   CHR	START	   STOP	       GENE	  .. .. AUTO_VC     .. .. .. ABBERATION   QUALITY
-  1     156104958  156105124  LMNA	  .. .. 0.06058213  .. .. .. DEL          .
+  1     156104958   156105124  LMNA	  .. .. 0.06058213  .. .. .. DEL          .
   ..						
-  2     179511192  179511307  TTN	  .. .. 0.095184824 .. .. .. DEL          .
+  2     179511192   179511307  TTN	  .. .. 0.095184824 .. .. .. DEL          .
   ..
   6     7576507	   7576710	  DSP	  .. .. 0.051947043 .. .. .. DUP          .
-  6	    7577172	   7577296	  DSP	  .. .. 0.094469481 .. .. .. DUP          . 
-  6	    7577992	   7578140	  DSP	  .. .. 0.061275822 .. .. .. DUP          .
+  6	   7577172	  7577296   DSP	  .. .. 0.094469481 .. .. .. DUP          . 
+  6	   7577992	  7578140   DSP	  .. .. 0.061275822 .. .. .. DUP          .
   ..						
-  12    21997397   21997507	  ABCC9   .. .. 0.120684521 .. .. .. DUP          LOW_QUALITY
+  12    21997397   21997507   ABCC9   .. .. 0.120684521 .. .. .. DUP         LOW_QUALITY
   ..						
   18    28647961   28648199   DSC2	  .. .. 0.063042636 .. .. .. DEL          .
   18    28648255   28648331   DSC2	  .. .. 0.160488643 .. .. .. DEL          LOW_QUALITY
@@ -603,7 +603,6 @@ Sample CV: 0.09
 Target CV: 0.10
 
 
-
 #FAQ
 
 Which are the criteria of adding a call to the longlist, shortlist or finallist?
@@ -635,11 +634,27 @@ All the targets on the X chromosome are of low quality.
 
 - Make sure all control samples are of the same gender. 
 
+When setting the -zScoreCutOffLow parameter on X I get 'Unknown option :X'
+
+- If the parameteres in the print to the screen are set correctly the output is correct. However, to prevent the error message instead of a space use an = sign to connect the variable. For instance:\
+
+```
+-zScoreCutOffLow=-3
+```
+
+
 	
 
 
-# Changelog v1.2.0
-The following bugs have been fixed in the update from version 1.1.6 to v1.2.0:
+# Changelog
+
+##v1.2.1
+- Enabled merging HOM_DEL/HOM_DUP and DEL/DUP calls. Now everything works correctly.  
+
+##v1.2.0.1
+- Disabled merging HOM_DEL/HOM_DUP and DEL/DUP calls as implemented in v1.2.0, because of a bug resulting in showing the start position of the last exon in the call in the longlist instead of the first exon in the call.
+
+##v1.2.0
 
 ###Major
 - In version 1.1.6 after running the StartWithBam function analyzing a region having a coverage of 0, the normalized coverage would have a value of -NaN. This issue is fixed in version 1.2.0, by adding the -a flag to the samtools depth function. However, this causes a dependency on samtools version 1.3 or higher. 
