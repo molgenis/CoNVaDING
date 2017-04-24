@@ -647,8 +647,6 @@ When settig the -zScoreCutOffLow parameter on X I get 'Unknown option :X'
 
 
 # Changelog
-The following bugs have been fixed in the update from version 1.1.6 to v1.2.0:
-
 
 ##v1.2.1
 - Enabled merging HOM_DEL/HOM_DUP and DEL/DUP calls. Now everything works correctly.  
