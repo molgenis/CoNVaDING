@@ -1,9 +1,10 @@
-CONVADINGDIR="/PATH/TO/CoNVaINGDIR/"
-DATADIR="/PATH/TO/Test_dataset/"
+CONVADINGDIR="../.."
+DATADIR="../../Test_dataset"
 
-perl -d $CONVADINGDIR/CoNVaDING.pl \
+
+perl $CONVADINGDIR/CoNVaDING.pl \
 -mode PipelineFromCounts \
 -inputDir $DATADIR/sample \
 -bed $DATADIR/bedfile/Test_dataset_bedfile.bed \
--outputDir $DATADIR/results/pipelineFrom_counts \
+-outputDir $DATADIR/results \
 -controlsDir $DATADIR/controls
