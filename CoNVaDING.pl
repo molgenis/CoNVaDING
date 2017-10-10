@@ -17,7 +17,7 @@ print STDERR "COMMANDLINE OPTIONS IN AFFECT:\n";
 foreach my $par (@ARGV){
     print STDERR "$par\n";
 }
-print "#######################################\n";
+print STDERR "#######################################\n";
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 my $version = "1.2.2";
