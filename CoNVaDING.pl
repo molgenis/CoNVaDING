@@ -228,7 +228,6 @@ if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCoun
     }
     startWithBamMode();
     $params->{inputdir} = $params->{controlsdir};
-    generateTargetQcListMode();
 
 #Start analysis from BAM file
 }elsif ($params->{mode} eq "StartWithBam"){   
