@@ -475,8 +475,8 @@ sub createFinalList{
 
     #Iterate over input files, asses if failing targets are within the calls in the shortlist file
     foreach my $shortlist (@$inputfiles){
-        print "\n\n#######################################\n";
-        print "Analyzing sample: $shortlist..\n";
+        print STDERR"\n\n#######################################\n";
+        print STDERR"Analyzing sample: $shortlist..\n";
         #Read file into array;
         my ($file,$dir,$ext) = fileparse($shortlist, qr/\.[^.]*/);
         $file =~ s/.shortlist//gs;
@@ -531,7 +531,7 @@ sub createFinalList{
             #Check if number of failing targets equals number of total targets within this event, if true event fails quality threshold and is removed from *.finallist.txt
             if ($totalTargets == $targetsFail) {
                 #event fails QC, don't write it to output
-                print "\nEvent failing target QC: $line\n";
+                print STDERR"\nEvent failing target QC: $line\n";
             }else{
                 $outputToWrite .= "$line\n";
             }
@@ -539,7 +539,7 @@ sub createFinalList{
         #Write output to *.finallist.txt file
         my $outputfile = $params->{outputdir}."/".$file.".finallist.txt"; #Output filename
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
-        print "#######################################\n\n";
+        print STDERR "#######################################\n\n";
         undeff($outputToWrite);
     }
 }
@@ -669,13 +669,13 @@ sub startWithBam{
             if (defined $params->{rmdup}){
                 #Process BAM files generating duplicate removed BAM files
                 rmDupBam($bam, $rmdup_bam, $tmp_dir);
-                print "Starting counts analysis..\n"; #Start to count regions
+                print STDERR "Starting counts analysis..\n"; #Start to count regions
                 $file_to_count = $rmdup_bam;
             }else{ #BAM files are already rmdupped, add them to list of files to process (retrieve them from inputdir cmdline)
                 $file_to_count = $params->{inputdir}."/".$bam;
             }
             
-            print "Starting counts analysis..\n";
+            print STDERR "Starting counts analysis..\n";
             countFromBam($file_to_count);
         }
     }    
@@ -774,13 +774,13 @@ sub startWithMatchScore{
         my $outputToWrite= "SAMPLE\tSAMPLE_PATH\tCONTROL_SAMPLE\tCONTROL_SAMPLE_PATH\tAVERAGE_BEST_MATCH_SCORE\n"; #Assign header to output best match file
         
         for (my $k=0; $k < $numBestMatchSamples; $k++){
-            print "Control: " . $keys[$k] . "\t\t\tAvg abs diff: " . $vals[$k] . "\n";
+            print STDERR "Control: " . $keys[$k] . "\t\t\tAvg abs diff: " . $vals[$k] . "\n";
             my $lin = join "\t",    $inputfile,
                                     $params->{inputdir}."/".$inputfile,$keys[$k],
                                     $params->{controlsdir}."/".$keys[$k],$vals[$k]."\n";
             $outputToWrite .= $lin; #concatenate full generated line to files
         }
-        print "#######################################\n\n";
+        print STDERR "#######################################\n\n";
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
     }
 }
@@ -809,7 +809,7 @@ sub startWithBestScore{
         my @controlGene;
         my @controlTarget;
         my @sampleRatio;
-        print "\nAnalyzing sample: $inputfilename..\n";
+        print STDERR "\nAnalyzing sample: $inputfilename..\n";
         
         my $outputToWrite= "CHR\tSTART\tSTOP\tGENE\tTARGET\t$inputfilename\t"; #Assign header to output best match file
         open(INPUTFILE, $params->{inputdir}."/".$inputfilename) or die("Unable to open file: $!"); #Read best match file
@@ -1019,7 +1019,7 @@ sub startWithBestScore{
         #my $outputPostfixRemoved = $inputfile;
         #$outputPostfixRemoved =~ s/$extension//g; #Remove old extension from inputfile
         my $outputfile = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.txt"; #Output filename
-        print "#######################################\n\n";
+        print STDERR "#######################################\n\n";
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
         
         #Write sample CV score to log file in output directory
@@ -1114,9 +1114,9 @@ sub startWithBestScore{
         $outputToWrite .= $lin;
         $outputToWrite .= $failedRegionsToWrite; #Add failed regions to output logfile
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
-        print "Sample CV: $sampleRatio\n";
-        print "Mean average best match score of all control samples: $meanAvgBestMatchScore\n";
-        print "#######################################\n\n";
+        print STDERR "Sample CV: $sampleRatio\n";
+        print STDERR "Mean average best match score of all control samples: $meanAvgBestMatchScore\n";
+        print STDERR "#######################################\n\n";
         
         createOutputLists( $extension, $inputfilename);
     }
@@ -1139,9 +1139,9 @@ sub calcAutoRatioZscoreVc{
         $autoRatio = "NA";
         $autoZscore = "NA";
         $autoVc = "NA";
-        print "\n##### WARNING ##### WARNING #####\n";
+        print STDERR "\n##### WARNING ##### WARNING #####\n";
         print STDERR $lin."\n";
-        print "Mean or Standard Deviation is 0.\nCan not calculate ratio, zscore and variation coefficient on this region\n";
+        print STDERR "Mean or Standard Deviation is 0.\nCan not calculate ratio, zscore and variation coefficient on this region\n";
     }else{
         $autoRatio = ($sampleValue/$autoMean);
         #z-score, observed minus mean devided by sd
@@ -1819,8 +1819,8 @@ sub allTargetNormalization {
         }
     }
     undef(%targetsToSlct);
-    print "Finished target normalization\n";
-    print "#######################################\n\n";
+    print STDERR "Finished target normalization\n";
+    print STDERR "#######################################\n\n";
 }
 
 sub targetAudit {
@@ -1829,8 +1829,8 @@ sub targetAudit {
     my ($samplesToSlct) = @_;
     
     #Read forward control file
-    print "$file.normalized.$choose.coverage.fwd.controls.txt\n";
-    print "$file.normalized.$choose.coverage.rvrs.controls.txt\n";
+    print STDERR "$file.normalized.$choose.coverage.fwd.controls.txt\n";
+    print STDERR "$file.normalized.$choose.coverage.rvrs.controls.txt\n";
     open(FWDCONTROLS, "$file.normalized.$choose.coverage.fwd.controls.txt") or die("Unable to open file: $!"); #Read best match file
     my @normFwdControls= <FWDCONTROLS>;
     close(FWDCONTROLS);
@@ -1929,7 +1929,7 @@ sub createNormalizedCoverageFiles {
     my %sexdiff;
     my $perfectMatch = 0;
 
-    print "\nAnalyzing sample: $inputfile..\n";
+    print STDERR "\nAnalyzing sample: $inputfile..\n";
     open(INPUTFILE, $params->{inputdir}."/".$inputfile) or die("Unable to open file: $!"); #Read count file
     my @inputfile= <INPUTFILE>;
     close(INPUTFILE);
@@ -2105,7 +2105,7 @@ sub createNormalizedCoverageFiles {
             }else{
                 #Different number of regions in both files, comparison can't be made
                 #Throw error and continue with next file
-                print "File ".$params->{controlsdir}."/".$ctrlfile." does not contain the same number of regions as the sample file, therefore skipping this file from the analysis\n";
+                print STDERR "File ".$params->{controlsdir}."/".$ctrlfile." does not contain the same number of regions as the sample file, therefore skipping this file from the analysis\n";
                 #Continue with next element in controls array
                 next;
             }
@@ -2228,7 +2228,7 @@ sub countFromBam {
             $regioncov =~ s/-nan/0/gs;
             print $counts_tmp_file join "\t", $chr, $start, $stop, $gene, $target, $regioncov."\n";
         }else{
-            print "Incorrect BED file format, please check your BED file before processing.\n";
+            print STDERR "Incorrect BED file format, please check your BED file before processing.\n";
         }
     }
     
@@ -2403,7 +2403,7 @@ sub rmDupBam {
     #my $filename;
     my ($filename,$dir,$ext) = fileparse($bam, qr/\.[^.]*/);
     #print "$file\t\t$dir\t\t$ext\n";
-    print "Processing file: $bam\n";
+    print STDERR "Processing file: $bam\n";
 
     #creating additional temp files
     my $rmdup_bam   = File::Temp->new( TEMPLATE => 'tempXXXXX',DIR => $tmp_dir, SUFFIX => '.rmdup.bam'  );
@@ -2536,7 +2536,7 @@ sub undeff {
 
 #Usage of software
 sub usage {
-        print <<EOF;
+        print STDERR <<EOF;
 
 #########################################################################################################
    _____      _   ___      __   _____ _____ _   _  _____ 
