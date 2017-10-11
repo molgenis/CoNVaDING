@@ -557,14 +557,11 @@ sub createFinalList{
                 my $namestring =  "Name=".$abberation.":".$gene_targets.";".
                                   "Note=NUMBER_OF_TARGETS:".$n_targets.",".
                                   "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$n_targets_SHAPIRO.";";
-                                                             
                 $outputfileBedToWrite .= join "\t", $chr,
                                                     $start,
                                                     $end,
                                                     $gene,
                                                     $namestring."\n";
-                
-                
             }
         }
         #Write output to *.finallist.txt file
@@ -573,6 +570,7 @@ sub createFinalList{
         my $nr_of_lines = ($outputfileBedToWrite =~ tr/\n//);
         if ($nr_of_lines > 1) {
             my $outputfileBed = $params->{outputdir}."/".$file.".finallist.bed"; #Output filename
+           $outputfileBedToWrite =~ s/ /%20/g;
             writeOutput($outputfileBed, $outputfileBedToWrite); #Write output to above specified file
         }
         print STDERR "#######################################\n\n";
@@ -1639,8 +1637,8 @@ sub createOutputLists{
                 my $chrPrev = $arrayPrev[0];
                 my $startPrev = $arrayPrev[1];
                 my $gene_target_Prev = $arrayRefs[7][$m-$abberationCount];
-                my $target_gene_abberation_interval = $gene_target_Prev."%20-%20".$genetargets;
-                if ($target_gene_abberation_interval eq "-%20-%20-") {
+                my $target_gene_abberation_interval = $gene_target_Prev." - ".$genetargets;
+                if ($target_gene_abberation_interval eq "- - -") {
                     $target_gene_abberation_interval = "-";
                 }
 
@@ -1653,6 +1651,7 @@ sub createOutputLists{
                                                  $abberationCountToPrint,
                                                  $shapPassCount,
                                                  $abberation."\n";
+
                 my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
                                   "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
                                   "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCount.";";
@@ -1671,6 +1670,11 @@ sub createOutputLists{
                         $start_print = $chrStarts[1];
                     }
                     
+                    my $target_gene_abberation_interval = $gene_target_Prev." - ".$genetargets;
+                    if ($target_gene_abberation_interval eq "- - -") {
+                        $target_gene_abberation_interval = "-";
+                    }
+                    
                     #Write high quality events
                     $outputShortToWrite .= join "\t", $chr_print,
                                                       $start_print,
@@ -1680,11 +1684,11 @@ sub createOutputLists{
                                                       $abberationCountToPrint,
                                                       $shapPassCount,
                                                       $abberation."\n";
-                                                     
+                                                      
                     my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
                                       "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
                                       "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCount.";";
-                                                             
+
                     $outputfileShortBedToWrite .= join "\t", $chr_print,
                                                              $start_print,
                                                              $stop,
@@ -1762,8 +1766,8 @@ sub createOutputLists{
                 my $chrP = $arrayP[0];
                 my $startP = $arrayP[1];
                 my $gene_target_Prev = $arrayRefs[7][$m-$abberationCount];
-                my $target_gene_abberation_interval = $gene_target_Prev."20-%20".$genetargets;
-                if ($target_gene_abberation_interval eq "-%20-%20-") {
+                my $target_gene_abberation_interval = $gene_target_Prev." - ".$genetargets;
+                if ($target_gene_abberation_interval eq "- - -") {
                     $target_gene_abberation_interval = "-";
                 }
                 #$outputLongToWrite .= "$chr\t$start\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCountHOM\t$abberation\n"; #Write event end and details away
@@ -1783,7 +1787,8 @@ sub createOutputLists{
                                                       $target_gene_abberation_interval,
                                                       $abberationCountToPrint,
                                                       $shapPassCountHOM,
-                                                      $abberation."\n"; 
+                                                      $abberation."\n";
+
                     my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
                                       "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
                                       "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCountHOM.";";
@@ -1811,11 +1816,13 @@ sub createOutputLists{
     
     my $nr_of_lines = ($outputfileLongBedToWrite =~ tr/\n//);
     if ($nr_of_lines > 1) {
+        $outputfileLongBedToWrite =~ s/ /%20/g;
         writeOutput($outputfileLongBed, $outputfileLongBedToWrite); #Write output to above specified file
     }
 
     $nr_of_lines = ($outputfileShortBedToWrite =~ tr/\n//);
     if ($nr_of_lines > 1) {
+        $outputfileShortBedToWrite =~ s/ /%20/g;
         writeOutput($outputfileShortBed, $outputfileShortBedToWrite); #Write output to above specified file
     }
     
