@@ -12,35 +12,28 @@ use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 use File::Temp qw/ tempfile tempdir /;
 
-print STDERR "\n#######################################\n";
-print STDERR "COMMANDLINE OPTIONS IN AFFECT:\n";
-foreach my $par (@ARGV){
-    print STDERR "$par\n";
-}
-print STDERR "#######################################\n";
-
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 my $version = "1.2.2";
 
 ##############################################################################################
 ##############################################################################################
-##   CoNVaDING, copy number variation detecting in next-generation sequencing gene panels       ##
+##   CoNVaDING, copy number variation detecting in next-generation sequencing gene panels   ##
 ##   Copyright (C) 2015  Freerk van Dijk & Lennart Johansson                                ##
 ##                                                                                          ##
-##   This file is part of CoNVaDING.                                                            ##
+##   This file is part of CoNVaDING.                                                        ##
 ##                                                                                          ##
-##   CoNVaDING is free software: you can redistribute it and/or modify                          ##
+##   CoNVaDING is free software: you can redistribute it and/or modify                      ##
 ##   it under the terms of the GNU Lesser General Public License as published by            ##
 ##   the Free Software Foundation, either version 3 of the License, or                      ##
 ##   (at your option) any later version.                                                    ##
 ##                                                                                          ##
-##   CoNVaDING is distributed in the hope that it will be useful,                               ##
+##   CoNVaDING is distributed in the hope that it will be useful,                           ##
 ##   but WITHOUT ANY WARRANTY; without even the implied warranty of                         ##
 ##   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                          ##
 ##   GNU Lesser General Public License for more details.                                    ##
 ##                                                                                          ##
 ##   You should have received a copy of the GNU Lesser General Public License               ##
-##   along with CoNVaDING.  If not, see <http://www.gnu.org/licenses/>.                         ##
+##   along with CoNVaDING.  If not, see <http://www.gnu.org/licenses/>.                     ##
 ##############################################################################################
 ##############################################################################################
 
@@ -48,52 +41,53 @@ my $version = "1.2.2";
 my $params = {};
 
 #set defaults
-$params->{regionThreshold} = 20;
-$params->{ratioCutOffLow} = 0.65;
-$params->{ratioCutOffHigh} = 1.4;
-$params->{zScoreCutOffLow} = -3;
-$params->{zScoreCutOffHigh} = 3;
-$params->{sampleRatioScore} = 0.09;
+$params->{regionThreshold}               = 20;
+$params->{ratioCutOffLow}                = 0.65;
+$params->{ratioCutOffHigh}               = 1.4;
+$params->{zScoreCutOffLow}               = -3;
+$params->{zScoreCutOffHigh}              = 3;
+$params->{sampleRatioScore}              = 0.09;
 $params->{percentageLessReliableTargets} = 20;
-$params->{numBestMatchSamplesCmdL} = 30;
-
-my $help;
+$params->{numBestMatchSamplesCmdL}       = 30;
+$params->{mode}                          = "StartWithBam";
 
 #### get options
 GetOptions(
-                "h"                     => \$help,
-                "mode=s"                => \$params->{mode}, #For options, see list below (default="StartWithBam")
-                "inputDir:s"            => \$params->{inputdir}, #optional
-                "controlsDir:s"         => \$params->{controlsdir}, #optional
-                "outputDir=s"           => \$params->{outputdir},
-                "bed:s"                 => \$params->{bedfile}, #optional
-                "controlSamples:s"      => \$params->{numBestMatchSamplesCmdL}, #optional
-                "regionThreshold:s"     => \$params->{regionThreshold}, #optional
-                "rmDup:s"               => \$params->{rmdup}, #optional
-                "sexChr:s"              => \$params->{sexchr}, #optional
-                "useSampleAsControl:s"  => \$params->{sampleAsControl}, #optional
-                "ratioCutOffLow:s"      => \$params->{ratioCutOffLow}, #optional
-                "ratioCutOffHigh:s"     => \$params->{ratioCutOffHigh}, #optional
-                "zScoreCutOffLow:s"     => \$params->{zScoreCutOffLow}, #optional
-                "zScoreCutOffHigh:s"    => \$params->{zScoreCutOffHigh}, #optional
-                "sampleRatioScore:s"    => \$params->{sampleRatioScore}, #optional
-                "targetQcList:s"        => \$params->{targetQcList}, #optional
-                "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets} #optional
-          );
-usage() and exit(1) if $help;
+    "mode:s"                          => \$params->{mode}, #For options, see list below (default="StartWithBam")
+    "inputDir:s"                      => \$params->{inputdir},# required for all modes except GenerateTargetQcList
+    "outputDir=s"                     => \$params->{outputdir}, # required always
+    "controlsDir:s"                   => \$params->{controlsdir}, #optional
+    "bed:s"                           => \$params->{bedfile}, #optional
+    "controlSamples:s"                => \$params->{numBestMatchSamplesCmdL}, #optional
+    "regionThreshold:s"               => \$params->{regionThreshold}, #optional
+    "rmDup:s"                         => \$params->{rmdup},  #optional
+    "sexChr:s"                        => \$params->{sexchr}, #optional
+    "useSampleAsControl:s"            => \$params->{sampleAsControl}, #optional
+    "ratioCutOffLow:s"                => \$params->{ratioCutOffLow}, #optional
+    "ratioCutOffHigh:s"               => \$params->{ratioCutOffHigh}, #optional
+    "zScoreCutOffLow:s"               => \$params->{zScoreCutOffLow}, #optional
+    "zScoreCutOffHigh:s"              => \$params->{zScoreCutOffHigh}, #optional
+    "sampleRatioScore:s"              => \$params->{sampleRatioScore}, #optional
+    "targetQcList:s"                  => \$params->{targetQcList}, #optional
+    "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets}, #optional
+    "h|help"                          => sub { usage() and exit(1)},
+    "version"                         => sub { print "CoNVaDING v".$version."\n" and exit(1)}
+);
 #Obligatory args
 usage() and exit(1) unless $params->{mode};
 usage() and exit(1) unless $params->{outputdir};
 #Add more parameters later
 
 #Check input parameters
-if (not defined $params->{mode}){ #If $params->{mode} is not defined, assign default value "StartWithBam"
-    $params->{mode} = "StartWithBam";
-}
-
-if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts" || $params->{mode} eq "addToControls" || $params->{mode} eq "StartWithBam" || $params->{mode} eq "StartWithAvgCount" || $params->{mode} eq "StartWithMatchScore" || $params->{mode} eq "StartWithBestScore" || $params->{mode} eq "GenerateTargetQcList" || $params->{mode} eq "CreateFinalList") {
-    #continue
-}else{ #Throw error
+unless ($params->{mode} eq "PipelineFromBams"      ||
+        $params->{mode} eq "PipelineFromCounts"   ||
+        $params->{mode} eq "addToControls"        ||
+        $params->{mode} eq "StartWithBam"         ||
+        $params->{mode} eq "StartWithAvgCount"    ||
+        $params->{mode} eq "StartWithMatchScore"  ||
+        $params->{mode} eq "StartWithBestScore"   ||
+        $params->{mode} eq "GenerateTargetQcList" ||
+        $params->{mode} eq "CreateFinalList") {
     die "Mode ".$params->{mode}." is not supported. Please read the manual.\n";
 }
 
@@ -107,15 +101,6 @@ if ($params->{mode} eq "StartWithBestScore"){
     }
 }
 
-
-
-#Check if input directory exists, otherwise error and die
-if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts" || $params->{mode} eq "addToControls"  || $params->{mode} eq "StartWithBam" || $params->{mode} eq "StartWithAvgCount" || $params->{mode} eq "StartWithMatchScore" || $params->{mode} eq "StartWithBestScore" || $params->{mode} eq "CreateFinalList"){
-    if (not defined $params->{inputdir}) { #Throw error when inputdir is not specified
-        die "Directory for input samples (-inputDir) is not specified, please specify to continue analysis.\n";
-    }
-}
-
 #Check if output directory exists, otherwise create it
 if (!-d $params->{outputdir}) { #Output directory does not exist, create it
     mkdir $params->{outputdir};
@@ -123,11 +108,16 @@ if (!-d $params->{outputdir}) { #Output directory does not exist, create it
 
 my @bedfile;
 #Check if BED file is specified for StartWithBam and StartWithAvgCount, else die and throw error message
-if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts" || $params->{mode} eq "addToControls"  || $params->{mode} eq "StartWithBam" || $params->{mode} eq "StartWithAvgCount"){
+if ($params->{mode} eq "PipelineFromBams"    ||
+    $params->{mode} eq "PipelineFromCounts" ||
+    $params->{mode} eq "addToControls"      ||
+    $params->{mode} eq "StartWithBam"       ||
+    $params->{mode} eq "StartWithAvgCount"){
     if (not defined $params->{bedfile}){
         die "Required BED file not specified, please specify to continue analysis.\n";
     }
-}elsif ($params->{mode} eq "StartWithMatchScore" || $params->{mode} eq "StartWithBestScore"){ #Throw warning saying BED file is not used in this analysis.
+}elsif ($params->{mode} eq "StartWithMatchScore" ||
+        $params->{mode} eq "StartWithBestScore"){ #Throw warning saying BED file is not used in this analysis.
     if (defined $params->{bedfile}){
         print STDERR "\n##### WARNING ##### WARNING #####\n";
         print STDERR "User specified parameter \"bed\" not used in this analysis.";
@@ -137,6 +127,7 @@ if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCoun
 
 if ($params->{mode} eq "addToControls"){ 
     if (not defined $params->{sampleAsControl}){
+        print STDERR  "#####\n#Parameter sampleAsControl forcebly defined\n#####\n";
         $params->{sampleAsControl} = 1;
     }
     if (not defined $params->{controlsDir}){
@@ -146,16 +137,31 @@ if ($params->{mode} eq "addToControls"){
 
 #Check if controlsdir exists for four param options
 #if ($params->{mode} eq "StartWithBam" || $params->{mode} eq "StartWithAvgCount" || $params->{mode} eq "StartWithMatchScore" || $params->{mode} eq "GenerateTargetQcList"){ #Check if controlsdir is specified
-if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts"  || $params->{mode} eq "addToControls"  || $params->{mode} eq "StartWithBam" || $params->{mode} eq "StartWithAvgCount" || $params->{mode} eq "StartWithMatchScore"){ #Check if controlsdir is specified
+if ($params->{mode} eq "PipelineFromBams"     ||
+    $params->{mode} eq "PipelineFromCounts"  ||
+    $params->{mode} eq "StartWithBam"        ||
+    $params->{mode} eq "StartWithAvgCount"   ||
+    $params->{mode} eq "StartWithMatchScore" ||
+    $params->{mode} eq "addToControls"       ||
+    $params->{mode} eq "GenerateTargetQcList"
+    ){
+    
+    #Check if controlsdir is specified
     if (not defined $params->{controlsdir}) { #Throw error when controlsdir is not specified
         die "Directory for controlsamples (-controlsDir) is not specified, please specify to continue analysis.\n";
-    }else{
-        #Check if controls directory exists, otherwise create it
-        if (!-d $params->{controlsdir}) { #Controls directory does not exist, create it
+    }elsif (!-d $params->{controlsdir}) {
+        #Check if controls directory exists, otherwise create it except in pipeline modes
+        if ( $params->{mode} eq "StartWithAvgCount"   ||
+             $params->{mode} eq "StartWithMatchScore" ||
+             $params->{mode} eq "addToControls"){
             mkdir $params->{controlsdir};
+        }elsif($params->{mode} eq "PipelineFromBams"     ||
+               $params->{mode} eq "PipelineFromCounts"  ||
+               $params->{mode} eq "GenerateTargetQcList"){
+            die "Directory for controlsamples (-controlsDir) does not exist please specify to continue analysis.\n";
         }
     }
-    if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts"){
+    if ($params->{mode} eq "PipelineFromBams" || $params->{mode} eq "PipelineFromCounts"){
         if (not defined $params->{targetQcList}){
            $params->{targetQcList} = $params->{outputdir}."/"."targetQcList.txt";
         }
@@ -179,6 +185,19 @@ if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCoun
     }    
 }
 
+#Check if input directory exists for all modes that require it
+unless ($params->{mode} eq "GenerateTargetQcList"){
+    if (not defined $params->{inputdir}) { #Throw error when inputdir is not specified
+        die "Directory for input samples (-inputDir) is not specified, this is a requirement on all modes\n."
+            ."with the exception GenerateTargetQcList. Please specify input folder to continue analysis.\n";
+    }
+}else{
+    if (not defined $params->{inputdir}){
+        $params->{inputdir} = $params->{controlsdir};
+    }
+}
+
+
 #Checks when running in CreateFinalList mode
 if ($params->{mode} eq "CreateFinalList"){ #Check if targetQcList is specified
     if (not defined $params->{targetQcList}) { #Throw error when targetQcList is not specified
@@ -186,21 +205,30 @@ if ($params->{mode} eq "CreateFinalList"){ #Check if targetQcList is specified
     }
 }
 
+#Retrieve and print starttime
+my $starttime = localtime();
+
+print STDERR "\nStarting analysis $starttime\n";
+
+print STDERR "\n#######################################\n";
+print STDERR "Parameteres in effect in this Run:\n";
+foreach my $key (keys %{$params}){
+    print STDERR $key.":\t".$params->{$key}."\n";
+}
+print STDERR "#######################################\n";
+
+
 #sometimes the script want to modify  the outputdir and input dir to temp folders.
 # these are therefore stored as additional parameteres
 $params->{outputdirOriginal} = $params->{outputdir};
 $params->{inputdirOriginal}  = $params->{inputdir};
 
-#Retrieve and print starttime
-my $starttime = localtime();
-
-print "\nStarting analysis $starttime\n";
 
 #pipeline mode
-if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCounts"){
+if ($params->{mode} eq "PipelineFromBams" || $params->{mode} eq "PipelineFromCounts"){
 
     #mode to run complete pipeline from fresh bam inputs
-    if ($params->{mode} eq "PipelineFromBam"){
+    if ($params->{mode} eq "PipelineFromBams"){
         startWithBamMode();
      }   
     #mode to run complete pipeline from previous counts
@@ -217,20 +245,8 @@ if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCoun
         $params->{inputdir} = $params->{outputdir};
     }
     createFinalListMode();
-#mode to add to controls
-}elsif ($params->{mode} eq "addToControls"){ 
-    if (not defined $params->{sampleAsControl}){
-        warn "Parameter sampleAsControl forcebly defined\n";
-        $params->{sampleAsControl} = 1;
-    }
-    if (not defined $params->{controlsDir}){
-        $params->{controlsDir} = $params->{outputDir};
-    }
-    startWithBamMode();
-    $params->{inputdir} = $params->{controlsdir};
-
 #Start analysis from BAM file
-}elsif ($params->{mode} eq "StartWithBam"){   
+}elsif ($params->{mode} eq "StartWithBam" || $params->{mode} eq "addToControls"){ 
     startWithBamMode();
 #Start analysis from average count files
 }elsif ($params->{mode} eq "StartWithAvgCount"){
@@ -243,11 +259,6 @@ if ($params->{mode} eq "PipelineFromBam" || $params->{mode} eq "PipelineFromCoun
     startWithBestScoreMode();
 #Generate target QC list from all controlsamples
 }elsif ($params->{mode} eq "GenerateTargetQcList"){
-    if (not defined $params->{controlsdir}) { #Throw error when controlsdir is not specified
-        die "Directory for controlsamples (-controlsDir) is not specified, please specify to continue analysis.\n";
-    }
-    #Set inputdir to same value as controlsdir
-    $params->{inputdir} = $params->{controlsdir};
     generateTargetQcListMode();
 #Create final list based on target QC file
 }elsif ($params->{mode} eq "CreateFinalList"){ #Apply the target filtering using the file created in previous step
@@ -270,7 +281,6 @@ print STDERR "\nFinished analysis $endtime\n";
 ##########################################################
 
 sub startWithBamMode{
-    #continue
     if (defined $params->{rmdup}) { #Remove duplicate switch added in cmdline
         print "\n############\nrmdup switch detected, duplicate removal included in analysis\n############\n\n";
         print "Starting removing duplicates and creating new BAM files..\n";
@@ -485,7 +495,8 @@ sub createFinalList{
         #Retrieve chr, start, stop, genename and region coverage from file by searching column indices
         my $header = uc($file[0]); #Header in uppercase
         chomp $header;
-        my $outputToWrite .= "$header\n";
+        my $outputToWrite = "$header\n";
+        my $outputfileBedToWrite = "#gfftags\n";
         my @colNames = qw(CHR START STOP GENE);
         my $indices  = getColumnIdx($header, \@colNames);
         my $chrIdx = $indices[0];
@@ -533,11 +544,37 @@ sub createFinalList{
                 print STDERR"\nEvent failing target QC: $line\n";
             }else{
                 $outputToWrite .= "$line\n";
+                my @fields = split /\t/, $line;
+                my $chr = shift @fields;
+                my $start = shift @fields;
+                my $end = shift @fields;
+                my $gene = shift @fields;
+                my $gene_targets = shift @fields;
+                my $n_targets = shift @fields;
+                my $n_targets_SHAPIRO = shift @fields;
+                my $abberation = shift @fields;
+
+                my $namestring =  "Name=".$abberation.":".$gene_targets.";".
+                                  "Note=NUMBER_OF_TARGETS:".$n_targets.",".
+                                  "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$n_targets_SHAPIRO.";";
+                                                             
+                $outputfileBedToWrite .= join "\t", $chr,
+                                                    $start,
+                                                    $end,
+                                                    $gene,
+                                                    $namestring."\n";
+                
+                
             }
         }
         #Write output to *.finallist.txt file
         my $outputfile = $params->{outputdir}."/".$file.".finallist.txt"; #Output filename
         writeOutput($outputfile, $outputToWrite); #Write output to above specified file
+        my $nr_of_lines = ($outputfileBedToWrite =~ tr/\n//);
+        if ($nr_of_lines > 1) {
+            my $outputfileBed = $params->{outputdir}."/".$file.".finallist.bed"; #Output filename
+            writeOutput($outputfileBed, $outputfileBedToWrite); #Write output to above specified file
+        }
         print STDERR "#######################################\n\n";
         undeff($outputToWrite);
     }
@@ -675,7 +712,7 @@ sub startWithBam{
             }
             
             print STDERR "Starting counts analysis..\n";
-            countFromBam($file_to_count);
+            countFromBam($file_to_count, $file);
         }
     }    
 }    
@@ -1507,14 +1544,21 @@ sub createOutputLists{
     my $outputfileTotal = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.totallist.txt"; #Output total filename
     my $outputfileLong  = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.longlist.txt"; #Output long filename
     my $outputfileShort = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.shortlist.txt"; #Output short filename
-    my $outputTotalToWrite;
-    my $outputLongToWrite;
-    my $outputShortToWrite;
+    my $outputfileTotalBed = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.totallist.bed"; #Output total filename
+    my $outputfileLongBed  = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.longlist.bed"; #Output long filename
+    my $outputfileShortBed = $params->{outputdir}."/".$outputPostfixRemoved.".best.score.shortlist.bed"; #Output short filename
+    
+    
     my $lin = "CHR\tSTART\tSTOP\tGENE\tTARGET\tAUTO_RATIO\tAUTO_ZSCORE\tAUTO_VC\tGENE_RATIO\tGENE_ZSCORE\tGENE_VC\tABBERATION\tQUALITY\tSHAPIRO-WILK\n"; #Set header for output files
     my $longShortLin = "CHR\tSTART\tSTOP\tGENE\tTARGET\tNUMBER_OF_TARGETS\tNUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST\tABBERATION\n";
-    $outputTotalToWrite .= $lin; #concatenate full generated line to files
-    $outputLongToWrite .= $longShortLin;
-    $outputShortToWrite .= $longShortLin;
+    my $outputTotalToWrite .= $lin; #concatenate full generated line to files
+    my $outputLongToWrite .= $longShortLin;
+    my $outputShortToWrite .= $longShortLin;
+    
+    my $bed_line = "#gfftags\n";
+    my $outputfileLongBedToWrite   = $bed_line;
+    my $outputfileShortBedToWrite  = $bed_line;
+    
     my $abberationCount = 0;
     my $shapPassCount = 0;
     my $highQualAbberationCount = 0;
@@ -1524,9 +1568,6 @@ sub createOutputLists{
     my $shapPassCountHOM = 0;
     my $highQualAbberationCountHOM = 0;
     for (my $m=0; $m <= $lastTargetIdx; $m++){ #Iterate over targets
-        my $chr;
-        my $start;
-        my $stop;
         my $target = $arrayRefs[0][$m]; #Extract current target
         $target =~ s/:/\t/g;
         $target =~ s/-/\t/g;
@@ -1537,11 +1578,26 @@ sub createOutputLists{
         my $genetargets = $arrayRefs[7][$m];
         my $vals = $arrayRefs[2][$m];
         $vals =~ s/&&/\t/g;
+        my @vals_array = split /\t/, $vals;
         my $abberation = $arrayRefs[3][$m];
         my $quality = $arrayRefs[4][$m];
         my $shap = $arrayRefs[6][$m];
         my @array = split("\t", $target);
-        $outputTotalToWrite .= "$target\t$gene\t$genetargets\t$vals\t$abberation\t$quality\t$shap\n"; #Add failed regions to output total file
+        my $chr = $array[0];
+        my $start = $array[1];
+        my $stop = $array[2];
+        
+        #Add failed regions to output total file
+        $outputTotalToWrite .= join "\t", $chr,
+                                          $start,
+                                          $stop,
+                                          $gene,
+                                          $genetargets,
+                                          $vals,
+                                          $abberation,
+                                          $quality,
+                                          $shap."\n"; 
+        
         if ($abberation eq "DEL" || $abberation eq "DUP" || $abberation eq "HOM_DEL" || $abberation eq "HOM_DUP") { #If abberation detected, check next abberation, afterwards write to longlist file
             my $nextAbberation = $arrayRefs[3][$m+1];
             my $nextGene = $arrayRefs[1][$m+1];
@@ -1550,11 +1606,6 @@ sub createOutputLists{
                 $nextGene = "LAST";
             }
             
-            #Extract chr and start position from target
-            my @array = split("\t", $target);
-            $chr = $array[0];
-            $start = $array[1];
-            $stop = $array[2];
             if ($abberationCount == 0) {
                 #$outputLongToWrite .= "$chr\t$start\t"; #Write event chr and start
             }
@@ -1587,16 +1638,58 @@ sub createOutputLists{
                 my @arrayPrev = split("\t", $targetPrev);
                 my $chrPrev = $arrayPrev[0];
                 my $startPrev = $arrayPrev[1];
+                my $gene_target_Prev = $arrayRefs[7][$m-$abberationCount];
+                my $target_gene_abberation_interval = $gene_target_Prev."%20-%20".$genetargets;
+                if ($target_gene_abberation_interval eq "-%20-%20-") {
+                    $target_gene_abberation_interval = "-";
+                }
+
+                #Write event
+                $outputLongToWrite .= join "\t", $chrPrev,
+                                                 $startPrev,
+                                                 $stop,
+                                                 $gene,
+                                                 $target_gene_abberation_interval,
+                                                 $abberationCountToPrint,
+                                                 $shapPassCount,
+                                                 $abberation."\n";
+                my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
+                                  "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
+                                  "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCount.";";
+                                                             
+                $outputfileLongBedToWrite .= join "\t", $chrPrev,
+                                                        $startPrev,
+                                                        $stop,
+                                                        $namestring."\n";
                 
-                #Write the previous chr and startPos to output
-                $outputLongToWrite .= "$chrPrev\t$startPrev\t$stop\t$gene\t$genetargets\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write event end and details away
+                
                 if ($highQualAbberationCount > 0) { #If total abberation counts is equal to high quality calls all target of an abberation are PASS, so the event can be written to the shortlist
-                    if ($abberationCount == 0 ) {
-                        $outputShortToWrite .= "$chr\t$start"; #Write event chr and start
-                    }else{
-                        $outputShortToWrite .= $chrStarts[0] . "\t" . $chrStarts[1];
+                    my $chr_print = $chr;
+                    my $start_print = $start;
+                    if ($abberationCount != 0 ) {
+                        $chr_print   = $chrStarts[0];
+                        $start_print = $chrStarts[1];
                     }
-                    $outputShortToWrite .= "\t$stop\t$gene\t$genetargets\t$abberationCountToPrint\t$shapPassCount\t$abberation\n"; #Write high quality events
+                    
+                    #Write high quality events
+                    $outputShortToWrite .= join "\t", $chr_print,
+                                                      $start_print,
+                                                      $stop,
+                                                      $gene,
+                                                      $target_gene_abberation_interval,
+                                                      $abberationCountToPrint,
+                                                      $shapPassCount,
+                                                      $abberation."\n";
+                                                     
+                    my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
+                                      "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
+                                      "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCount.";";
+                                                             
+                    $outputfileShortBedToWrite .= join "\t", $chr_print,
+                                                             $start_print,
+                                                             $stop,
+                                                             $namestring."\n";
+                
                 }
                 $abberationCount = 0; #Reset $abberationCount to 0
                 $shapPassCount = 0;
@@ -1668,6 +1761,11 @@ sub createOutputLists{
                 my @arrayP = split("\t", $target);
                 my $chrP = $arrayP[0];
                 my $startP = $arrayP[1];
+                my $gene_target_Prev = $arrayRefs[7][$m-$abberationCount];
+                my $target_gene_abberation_interval = $gene_target_Prev."20-%20".$genetargets;
+                if ($target_gene_abberation_interval eq "-%20-%20-") {
+                    $target_gene_abberation_interval = "-";
+                }
                 #$outputLongToWrite .= "$chr\t$start\t$stop\t$gene\t$abberationCountToPrint\t$shapPassCountHOM\t$abberation\n"; #Write event end and details away
                 if ($highQualAbberationCountHOM > 0) { #If total abberation counts is equal to high quality calls all target of an abberation are PASS, so the event can be written to the shortlist
                     if ($abberationCountHOM == 0 ) {
@@ -1677,7 +1775,23 @@ sub createOutputLists{
                         #push(@chrStarts, $start);
                         #$outputShortToWrite .= $chrStarts[0] . "\t" . $chrStarts[1];
                     }
-                    $outputShortToWrite .= "$chrP\t$startP\t$stop\t$gene\t$genetargets\t$abberationCountToPrint\t$shapPassCountHOM\t$abberation\n"; #Write high quality events
+                    #Write high quality events
+                    $outputShortToWrite .= join "\t", $chrP,
+                                                      $startP,
+                                                      $stop,
+                                                      $gene,
+                                                      $target_gene_abberation_interval,
+                                                      $abberationCountToPrint,
+                                                      $shapPassCountHOM,
+                                                      $abberation."\n"; 
+                    my $namestring =  "Name=".$abberation.":".$target_gene_abberation_interval.";".
+                                      "Note=NUMBER_OF_TARGETS:".$abberationCountToPrint.",".
+                                      "NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST:".$shapPassCountHOM.";";
+                                                             
+                    $outputfileShortBedToWrite .= join "\t", $chrP,
+                                                             $startP,
+                                                             $stop,
+                                                             $namestring."\n";
                 }
                 $abberationCountHOM = 0; #Reset $abberationCount to 0
                 $shapPassCountHOM = 0;
@@ -1694,6 +1808,18 @@ sub createOutputLists{
     writeOutput($outputfileTotal, $outputTotalToWrite); #Write output to above specified file
     writeOutput($outputfileLong, $outputLongToWrite); #Write output to above specified file
     writeOutput($outputfileShort, $outputShortToWrite); #Write output to above specified file
+    
+    my $nr_of_lines = ($outputfileLongBedToWrite =~ tr/\n//);
+    if ($nr_of_lines > 1) {
+        writeOutput($outputfileLongBed, $outputfileLongBedToWrite); #Write output to above specified file
+    }
+
+    $nr_of_lines = ($outputfileShortBedToWrite =~ tr/\n//);
+    if ($nr_of_lines > 1) {
+        writeOutput($outputfileShortBed, $outputfileShortBedToWrite); #Write output to above specified file
+    }
+    
+    
     undef(@arrayRefs); undef($outputTotalToWrite); undef($outputLongToWrite); undef($outputShortToWrite);
     undef(%geneCounts);
     undef(%totalGeneCounts);
@@ -1822,100 +1948,104 @@ sub allTargetNormalization {
     print STDERR "#######################################\n\n";
 }
 
-sub targetAudit {
-    my $file = shift;
-    my $choose = shift;
-    my ($samplesToSlct) = @_;
-    
-    #Read forward control file
-    print STDERR "$file.normalized.$choose.coverage.fwd.controls.txt\n";
-    print STDERR "$file.normalized.$choose.coverage.rvrs.controls.txt\n";
-    open(FWDCONTROLS, "$file.normalized.$choose.coverage.fwd.controls.txt") or die("Unable to open file: $!"); #Read best match file
-    my @normFwdControls= <FWDCONTROLS>;
-    close(FWDCONTROLS);
-    my $headerFwdControls = uc($normFwdControls[0]); #Header in uppercase
-    chomp $headerFwdControls;
-    #Split header
-    my @headerFwdControlsArray = split("\t", $headerFwdControls);
-    my @headerFwdControlsArrayIdx;
-    #Retrieve indices for samples to use in further analysis
-    foreach my $element (@$samplesToSlct){
-        my $sample = uc($element);
-        my( $index )= grep { $headerFwdControlsArray[$_] eq $sample } 0..$#headerFwdControlsArray;
-        push (@headerFwdControlsArrayIdx, $index);
-    }
-    
-    #Read reverse control file
-    open(RVRSCONTROLS, "$file.normalized.$choose.coverage.rvrs.controls.txt") or die("Unable to open file: $!"); #Read best match file
-    my @normRvrsControls= <RVRSCONTROLS>;
-    close(RVRSCONTROLS);
-    my $headerRvrsControls = uc($normRvrsControls[0]); #Header in uppercase
-    chomp $headerRvrsControls;
-    
-    my @headerRvrsControlsArray = split("\t", $headerRvrsControls);
-    my @headerRvrsControlsArrayIdx;
-    #Retrieve indices for samples to use in further analysis
-    foreach my $element(@$samplesToSlct){
-        my $sample = uc($element);
-        my( $index )= grep { $headerRvrsControlsArray[$_] eq $sample } 0..$#headerRvrsControlsArray;
-        push (@headerRvrsControlsArrayIdx, $index);
-    }
-
-    my $lastFwdControlsIdx = $#normFwdControls;
-    my $lastRvrsControlsIdx = $#normRvrsControls;
-    
-    #Check if both files contain same number of lines, if not quit with error
-    if ($lastFwdControlsIdx != $lastRvrsControlsIdx) {
-        die("ERROR: files containing forward and reverse reads do not have the same amount of lines!\n");
-    }
-    my %resultAuditTtest;
-    
-    #Iterate through lines in fwd and rvrs files
-    for (my $i=1; $i <= $lastFwdControlsIdx; $i++){
-        #Check if target passes Degrees of Freedom check
-        my $fwdControlLine = $normFwdControls[$i];
-        my @fwdControlLineArray = split("\t", $fwdControlLine);
-        my $target = $fwdControlLineArray[0];
-        #Only select columns from samples we want to use
-        my @fwdControlLineArrayValues;
-        foreach my $idx (@headerFwdControlsArrayIdx){ #For every index value obtained before, extract value
-            push(@fwdControlLineArrayValues, $fwdControlLineArray[$idx]);
-        }
-        my $rvrsControlLine = $normRvrsControls[$i];
-        my @rvrsControlLineArray = split("\t", $rvrsControlLine);
-        #Only select columns from samples we want to use
-        my @rvrsControlLineArrayValues;
-        foreach my $idx (@headerRvrsControlsArrayIdx){ #For every index value obtained before, extract value
-            push(@rvrsControlLineArrayValues, $rvrsControlLineArray[$idx]);
-        }
-        
-        my ($mean, $sd) = calcMeanSD(\@fwdControlLineArrayValues); #Calculate mean and SD for forward reads in target
-        my $fwdmean = $mean;
-        my $fwdSD = $sd;
-        ($mean, $sd) = calcMeanSD(\@rvrsControlLineArrayValues); #Calculate mean and SD for reverse reads in target
-        my $rvrsmean = $mean;
-        my $rvrsSD = $sd;
-        my $numSamples = scalar(@fwdControlLineArrayValues);
-        #Run audit for T-test to determine which targets can be used for further downstream analysis
-        my $resultTAi = auditTtest($fwdmean, $fwdSD, $rvrsmean, $rvrsSD, $numSamples);
-        $resultAuditTtest{ $target } = $resultTAi;
-    }
-    return(%resultAuditTtest);
-}
-
-sub auditTtest {
-    my $forwardMean = shift;
-    my $forwardSD = shift;
-    my $reverseMean = shift;
-    my $reverseSD = shift;
-    my $N = shift; #number of samples
-    #first part
-    my $SDFRN = sqrt(((($forwardSD * $forwardSD)/$N) + (($reverseSD * $reverseSD)/$N)));
-    
-    #second part, calc TAi
-    my $TAi = (abs(($forwardMean-$reverseMean))) / $SDFRN;
-    return($TAi);
-}
+################################################################################
+# the next 2 subs are not called in the code at the moment
+# so I am commenting them out for the time being
+################################################################################
+#sub targetAudit {
+#    my $file = shift;
+#    my $choose = shift;
+#    my ($samplesToSlct) = @_;
+#    
+#    Read forward control file
+#    print STDERR "$file.normalized.$choose.coverage.fwd.controls.txt\n";
+#    print STDERR "$file.normalized.$choose.coverage.rvrs.controls.txt\n";
+#    open(FWDCONTROLS, "$file.normalized.$choose.coverage.fwd.controls.txt") or die("Unable to open file: $!"); #Read best match file
+#    my @normFwdControls= <FWDCONTROLS>;
+#    close(FWDCONTROLS);
+#    my $headerFwdControls = uc($normFwdControls[0]); #Header in uppercase
+#    chomp $headerFwdControls;
+#    Split header
+#    my @headerFwdControlsArray = split("\t", $headerFwdControls);
+#    my @headerFwdControlsArrayIdx;
+#    Retrieve indices for samples to use in further analysis
+#    foreach my $element (@$samplesToSlct){
+#        my $sample = uc($element);
+#        my( $index )= grep { $headerFwdControlsArray[$_] eq $sample } 0..$#headerFwdControlsArray;
+#        push (@headerFwdControlsArrayIdx, $index);
+#    }
+#    
+#    Read reverse control file
+#    open(RVRSCONTROLS, "$file.normalized.$choose.coverage.rvrs.controls.txt") or die("Unable to open file: $!"); #Read best match file
+#    my @normRvrsControls= <RVRSCONTROLS>;
+#    close(RVRSCONTROLS);
+#    my $headerRvrsControls = uc($normRvrsControls[0]); #Header in uppercase
+#    chomp $headerRvrsControls;
+#    
+#    my @headerRvrsControlsArray = split("\t", $headerRvrsControls);
+#    my @headerRvrsControlsArrayIdx;
+#    Retrieve indices for samples to use in further analysis
+#    foreach my $element(@$samplesToSlct){
+#        my $sample = uc($element);
+#        my( $index )= grep { $headerRvrsControlsArray[$_] eq $sample } 0..$#headerRvrsControlsArray;
+#        push (@headerRvrsControlsArrayIdx, $index);
+#    }
+#
+#    my $lastFwdControlsIdx = $#normFwdControls;
+#    my $lastRvrsControlsIdx = $#normRvrsControls;
+#    
+#    Check if both files contain same number of lines, if not quit with error
+#    if ($lastFwdControlsIdx != $lastRvrsControlsIdx) {
+#        die("ERROR: files containing forward and reverse reads do not have the same amount of lines!\n");
+#    }
+#    my %resultAuditTtest;
+#    
+#    Iterate through lines in fwd and rvrs files
+#    for (my $i=1; $i <= $lastFwdControlsIdx; $i++){
+#        Check if target passes Degrees of Freedom check
+#        my $fwdControlLine = $normFwdControls[$i];
+#        my @fwdControlLineArray = split("\t", $fwdControlLine);
+#        my $target = $fwdControlLineArray[0];
+#        Only select columns from samples we want to use
+#        my @fwdControlLineArrayValues;
+#        foreach my $idx (@headerFwdControlsArrayIdx){ #For every index value obtained before, extract value
+#            push(@fwdControlLineArrayValues, $fwdControlLineArray[$idx]);
+#        }
+#        my $rvrsControlLine = $normRvrsControls[$i];
+#        my @rvrsControlLineArray = split("\t", $rvrsControlLine);
+#        Only select columns from samples we want to use
+#        my @rvrsControlLineArrayValues;
+#        foreach my $idx (@headerRvrsControlsArrayIdx){ #For every index value obtained before, extract value
+#            push(@rvrsControlLineArrayValues, $rvrsControlLineArray[$idx]);
+#        }
+#        
+#        my ($mean, $sd) = calcMeanSD(\@fwdControlLineArrayValues); #Calculate mean and SD for forward reads in target
+#        my $fwdmean = $mean;
+#        my $fwdSD = $sd;
+#        ($mean, $sd) = calcMeanSD(\@rvrsControlLineArrayValues); #Calculate mean and SD for reverse reads in target
+#        my $rvrsmean = $mean;
+#        my $rvrsSD = $sd;
+#        my $numSamples = scalar(@fwdControlLineArrayValues);
+#        Run audit for T-test to determine which targets can be used for further downstream analysis
+#        my $resultTAi = auditTtest($fwdmean, $fwdSD, $rvrsmean, $rvrsSD, $numSamples);
+#        $resultAuditTtest{ $target } = $resultTAi;
+#    }
+#    return(%resultAuditTtest);
+#}
+#
+#sub auditTtest {
+#    my $forwardMean = shift;
+#    my $forwardSD = shift;
+#    my $reverseMean = shift;
+#    my $reverseSD = shift;
+#    my $N = shift; #number of samples
+#    first part
+#    my $SDFRN = sqrt(((($forwardSD * $forwardSD)/$N) + (($reverseSD * $reverseSD)/$N)));
+#    
+#    second part, calc TAi
+#    my $TAi = (abs(($forwardMean-$reverseMean))) / $SDFRN;
+#    return($TAi);
+#}
 
 sub createNormalizedCoverageFiles {
     my $inputfile = shift;
@@ -2188,9 +2318,10 @@ sub writeOutput {
 #Create avg count files from BAM
 sub countFromBam {
     my $bam = shift;
+    my $ori_file_name = shift;
     #Specify header to write in outputfile
     my $outputToWrite = "CHR\tSTART\tSTOP\tGENE\tTARGET\tREGION_COV\tAVG_AUTOSOMAL_COV\tAVG_TOTAL_COV\tAVG_GENE_COV\tNORMALIZED_AUTOSOMAL\tNORMALIZED_TOTAL\tNORMALIZED_GENE\n";
-    my ($file,$dir,$ext) = fileparse($bam, qr/\.[^.]*/);
+    my ($file,$dir,$ext) = fileparse($ori_file_name, qr/\.[^.]*/);
     open (BED, "< ".$params->{bedfile}) or die "Cannot open file: ".$params->{bedfile}."\n";
     my @bedfile = <BED>;
     close(BED);
@@ -2252,7 +2383,8 @@ sub countFromBam {
     my $outputfile = $params->{outputdir}."/".$file.".normalized.coverage.txt"; #Output filename
     print STDERR "Writing normalized coverage counts to: $outputfile\n\n\n";
     writeOutput($outputfile, $outputToWrite); #Write output to above specified file
-    print STDERR "Finished processing file: $bam\n";
+    print STDERR "Finished processing file: $file.bam\n";
+    print STDERR "Saved normalised counts in $outputfile\n";
     print STDERR "\n"; 
     return ($outputfile);
 
@@ -2461,7 +2593,7 @@ sub getChrMatch{
     foreach my $line (@$bed){
         $line =~ s/(?>\x0D\x0A?|[\x0A-\x0C\x85\x{2028}\x{2029}])//; #Remove Unix and Dos style line endings
         my @fields = split /\s/, $line; # split on space because bed files can be split on empty space (this can be regulat space characters or tabs)
-        if ($firstLine =~ m/^chr.+/gs) { #Line starts with chr, so UCSC style
+        if ($fields[0] =~ m/^chr.+/gs) { #Line starts with chr, so UCSC style
             $hasbedStyleUCSC = 1;
         }else{
             $nobedStyleUCSC = 1;
@@ -2562,7 +2694,7 @@ Usage: $0 <mode> <parameters>
 -h\t\t\tThis manual.
 
 -mode\t\t\tMode to run in, one of the following required:
-\t\t\tPipelineFromBam :
+\t\t\tPipelineFromBams :
 \t\t\t\tStart with BAM files as input, to enable duplicate
 \t\t\t\tremoval use the rmdup variable.
 \t\t\t\tREQUIRED:
