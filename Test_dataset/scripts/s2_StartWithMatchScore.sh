@@ -1,8 +1,8 @@
-CONVADINGDIR="/PATH/TO/CoNVaINGDIR/"
-DATADIR="/PATH/TO/Test_dataset/"
+CONVADINGDIR="../.."
+DATADIR="../../Test_dataset"
 
-perl $CONVADINGDIR/CoNVaDING.pl \
+perl $CONVADINGDIR/CoNVaDING_old.pl \
 -mode StartWithMatchScore \
--inputDir $DATADIR/results/StartWithAvgCount \
+-inputDir $DATADIR/results \
 -controlsDir $DATADIR/controls \
--outputDir $DATADIR/results/StartWithMatchScore
+-outputDir $DATADIR/results
