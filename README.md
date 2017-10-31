@@ -1,11 +1,17 @@
-# CoNVaDING
-Copy Number Variation Detection In Next-generation sequencing Gene panels was designed for small (single-exon) copy number variation (CNV) detection in high coverage next-generation sequencing (NGS) data
+# CoNVaDING_reload
 
+This is a fork of the original project CoNVaDING
+Thia project is the official one and I make no claims to be a replacement of it.
 
-The documentation for version 1.2.0 can be found here:
+If you wan to follow the official project pleae go to 
 
 https://molgenis.gitbooks.io/convading/
 
-For documentation on version 1.1.6 please refer to:
+This fork was created by Duarte Molha to implement features not provided by the original project.
 
-http://molgenis.github.io/CoNVaDING/
+You can read more about how it differs from the original software here:
+
+https://github.com/duartemolha/CoNVaDING_reload/wiki/CoNVaDING_reload
+
+
+

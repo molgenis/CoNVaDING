@@ -13,12 +13,17 @@ use Statistics::Normality 'shapiro_wilk_test';
 use File::Temp qw/ tempfile tempdir /;
 
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
-my $version = "1.2.2";
+my $version_reload = "1.3";
+my $version = "1.2.1 ;
 
 ##############################################################################################
 ##############################################################################################
-##   CoNVaDING, copy number variation detecting in next-generation sequencing gene panels   ##
+##   CoNVaDING reload V1, copy number variation detecting in next-generation                ##
+##   sequencing gene panels                                                                 ##
+##                                                                                          ##
+##   this is a fork from the original program written by                                    ##
 ##   Copyright (C) 2015  Freerk van Dijk & Lennart Johansson                                ##
+##                                                                                          ##
 ##                                                                                          ##
 ##   This file is part of CoNVaDING.                                                        ##
 ##                                                                                          ##
@@ -71,7 +76,7 @@ GetOptions(
     "targetQcList:s"                  => \$params->{targetQcList}, #optional
     "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets}, #optional
     "h|help"                          => sub { usage() and exit(1)},
-    "version"                         => sub { print "CoNVaDING v".$version."\n" and exit(1)}
+    "version"                         => sub { print "CoNVaDING relaod v".$version_reload." modified fork from CoNVaDING v".$version."\n" and exit(1)}
 );
 #Obligatory args
 usage() and exit(1) unless $params->{mode};
