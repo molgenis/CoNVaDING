@@ -1,9 +1,9 @@
 # CoNVaDING_reload
 
 This is a fork of the original project CoNVaDING
-Thia project is the official one and I make no claims to be a replacement of it.
+This project is the official one and I make no claims to be a replacement of it.
 
-If you wan to follow the official project pleae go to 
+If you wan to follow the official project please go to: 
 
 https://molgenis.gitbooks.io/convading/
 
