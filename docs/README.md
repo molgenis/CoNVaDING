@@ -62,6 +62,36 @@ If no options are used the help menu will appear.
   Usage: ./CoNVaDING.pl <mode> <parameters>
   -h	  This manual.
   -mode		Mode to run in, one of the following required:
+			PipelineFromBams
+			  	Run entire pipeline starting with a folder of BAM files as input, to enable duplicate
+  				removal use the rmdup variable.
+				REQUIRED:
+  				[-inputDir, -outputDir, -bed, -controlsDir]
+  				OPTIONAL:
+  				[-rmDup, -useSampleAsControl --controlSamples]
+				[-regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
+				[-percentageLessReliableTargets]
+			PipelineFromCounts
+  				Run entire pipeline starting with a folder of of normalised count files as input
+				REQUIRED:
+  				[-inputDir, -outputDir, -bed, -controlsDir]
+  				OPTIONAL:
+  				[-rmDup, -useSampleAsControl --controlSamples]
+				[-regionThreshold, -ratioCutOffLow, -ratioCutOffHigh, -zScoreCutOffLow, -zScoreCutOffHigh, -sampleRatioScore]
+				[-percentageLessReliableTargets]
+			addToControls
+  				REQUIRED:
+				[-inputDir, -outputDir, -bed]
+				OverWritten parameteres:
+				[-useSampleAsControl} this is necessarily true on this mode
+				[-controlsDir] This is set to the same as -outputDir
+  				OPTIONAL:
+				[-rmDup, ] 
+					make sure that all the control files already present in the control folder where all calculated with
+					or without -rmDup. A mix of the 2 types in the control folders might bring unexpected results. 
+					In the future, I might make the control files contain an indication of how their where originally 
+					calculated and get the software to automatically pick the control that where processed the same way 
+					as the input samples
   			StartWithBam :
   				Start with BAM files as input, to enable duplicate
   				removal use the rmdup variable.
@@ -69,7 +99,7 @@ If no options are used the help menu will appear.
   				[-inputDir, -outputDir, -bed, -controlsDir]
   				OPTIONAL:
   				[-rmDup, -useSampleAsControl]
-  			  			StartWithAvgCount :
+  			StartWithAvgCount :
   				Start with Average Count files as input. This is a five column text file
   				with predefined column names. Please read the manual for instructions.
   				REQUIRED:
@@ -155,27 +185,31 @@ The 'outputDir' option should specify the path to the folder in which the normal
 The bed file should contain the regions of interest seperated in four columns specifying the chromosome, start position, stop position and the gene. No headers should be included. Make sure the style of the bed file matches the style of the bam file. UCSC style files show 'chr1, chr2, etc.' in the header, while in other styles this is '1, 2, etc.'. The naming of the chromosomes in the bed file should be the same as in the bam file header.
 
 
-It is important that the gene column has the exact same gene name for every target of the same gene, because these names are used to cluster targets for a normalization based on the targets belonging to the same gene. The bedfile should be sorted on chromosome and start position.
+It is important that the gene column has the exact same gene name for every target of the same gene, 
+because these names are used to cluster targets for a normalization based on the targets belonging to the same gene. 
+The bedfile should be sorted on chromosome and start position.
+
+You Can use the 5th column to further describe the targets and these will be displayed in the output report files
 
 Bed file example: 
 ```bash
-  2       96919506        96919893        TMEM127
-  2       96920531        96920775        TMEM127
-  2       96930836        96931159        TMEM127
-  2       215593360       215593772       BARD1
-  2       215595095       215595272       BARD1
-  2       215609751       215609923       BARD1
-  2       215610406       215610618       BARD1
-  2       215617131       215617319       BARD1
-  2       215632166       215632418       BARD1
-  2       215633916       215634076       BARD1
-  2       215645244       215646273       BARD1
-  2       215656981       215657209       BARD1
-  2       215661745       215661881       BARD1
-  2       215674096       215674333       BARD1
-  3       10183492        10183911        VHL
-  3       10188158        10188360        VHL
-  3       10191431        10191689        VHL
+  2       96919506        96919893        TMEM127	Exon1
+  2       96920531        96920775        TMEM127	Exon2
+  2       96930836        96931159        TMEM127	Exon3
+  2       215593360       215593772       BARD1	Exon1
+  2       215595095       215595272       BARD1	Exon2
+  2       215609751       215609923       BARD1	Exon3
+  2       215610406       215610618       BARD1	Exon4
+  2       215617131       215617319       BARD1	Exon5
+  2       215632166       215632418       BARD1	Exon6
+  2       215633916       215634076       BARD1	Exon7
+  2       215645244       215646273       BARD1	Exon8
+  2       215656981       215657209       BARD1	Exon9
+  2       215661745       215661881       BARD1	Exon10
+  2       215674096       215674333       BARD1	Exon11
+  3       10183492        10183911        VHL	Exon1
+  3       10188158        10188360        VHL	Exon2
+  3       10191431        10191689        VHL	Exon3
 ```
 
 The analysis options can be further extended:
@@ -486,13 +520,13 @@ The longlist should contain six calls:
 
 *Sample1.average.counts.best.score.longlist.txt*
 ```bash
-  CHR START      STOP       GENE    NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
-  1   156104958  156105124  LMNA    1                   1                                         DEL
-  2   179511192  179511307  TTN     1                   1                                         DEL
-  6   7576507    7578140    DSP     3                   3                                         DUP
-  12  21997397   21997507   ABCC9   1                   1                                         DUP
-  18  28647961   28681955   DSC2    17                  17                                        DEL
-  18  29078195   29102233   DSG2    6                   5                                         DEL
+  CHR START      STOP       GENE    GENETARGETS	NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
+  1   156104958  156105124  LMNA    exon1-exon2	       1                   1                                         DEL
+  2   179511192  179511307  TTN     exon1-exon10	   1                   1                                         DEL
+  6   7576507    7578140    DSP     exon1	           3                   3                                         DUP
+  12  21997397   21997507   ABCC9   exon5              1                   1                                         DUP
+  18  28647961   28681955   DSC2    regionA           17                  17                                         DEL
+  18  29078195   29102233   DSG2    intron1	           6                   5                                         DEL
 ```
 
 The totallist contains the information of all targets and shows the ratio's and Z-scores and the coefficient of variation of each target of the control set ratio's. If the coefficient of variation of the target (AUTO_VC) is too high (above 0.10) the target QC fails and the target is labelled low quality. 
@@ -541,13 +575,13 @@ Since the ABCC9 exon in which a duplication was detected has a low quality, this
 
 *Sample1.average.counts.best.score.shortlist.txt*
 ```bash
-  CHR START      STOP       GENE    NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
-  1   156104958  156105124  LMNA    1                   1                                         DEL
-  2   179511192  179511307  TTN     1                   1                                         DEL
-  6   7576507    7578140    DSP     3                   3                                         DUP
-  18  28647961   28681955   DSC2    17                  17                                        DEL
-  18  29078195   29102233   DSG2    6                   5                                         DEL
-```
+  CHR START      STOP       GENE   GENETARGETS	 NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
+  1   156104958  156105124  LMNA   exon1-exon2	        1                   1                                         DEL
+  2   179511192  179511307  TTN    exon1-exon10         1                   1                                         DEL
+  6   7576507    7578140    DSP    exon1	            3                   3                                         DUP
+  18  28647961   28681955   DSC2   exon5               17                  17                                         DEL
+  18  29078195   29102233   DSG2   regionA              6                   5                                         DEL
+```                                	    
 
 ### GenerateTargetQcList
 
@@ -584,12 +618,12 @@ The call of the titin exon had sufficient quality within the analysed sample. Ho
 
 *Sample1.average.counts.best.score.shortlist.finallist.txt*
 ```bash
-  CHR START      STOP       GENE    NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
-  1   156104958  156105124  LMNA    1                   1                                         DEL
-  6   7576507    7578140    DSP     3                   3                                         DUP
-  18  28647961   28681955   DSC2    17                  17                                        DEL
-  18  29078195   29102233   DSG2    6                   5                                         DEL
-```
+  CHR START      STOP       GENE  GENETARGETS	   NUMBER_OF_TARGETS   NUMBER_OF_TARGETS_PASS_SHAPIRO-WILK_TEST  ABBERATION
+  1   156104958  156105124  LMNA  exon1-exon2	          1                   1                                         DEL
+  6   7576507    7578140    DSP   exon1-exon10            3                   3                                         DUP
+  18  28647961   28681955   DSC2  exon1	                 17                  17                                         DEL
+  18  29078195   29102233   DSG2  exon5                   6                   5                                         DEL
+```                                      
 
 
  
@@ -643,10 +677,13 @@ When setting the -zScoreCutOffLow parameter on X I get 'Unknown option :X'
 ```
 
 
-	
-
-
 # Changelog
+
+##v1.3 CoNVaDING_reload
+- Added Pipeline modes
+- added support for target description via 5th column on bed file input
+- added bed file outputs
+- lots of close cleanup
 
 ##v1.2.1
 - Enabled merging HOM_DEL/HOM_DUP and DEL/DUP calls. Now everything works correctly.  
@@ -679,6 +716,8 @@ A video tutorial can be found [here](https://youtu.be/-geFWkvKZzE).
 # Contact
 
 Mailto: 
+
+Duarte Molha <duartemolha@gmail.com> (CoNVaDING_reload fork)
 
 Lennart Johansson <l.johansson@umcg.nl>
 
