@@ -1,13 +1,13 @@
 use strict;
 use warnings;
 
-use 5.22;
+use 5.22.1;
 
 use ExtUtils::MakeMaker;
 WriteMakefile
 (
-	NAME         => 'CoNVaDING_reload',
-	VERSION_FROM => 'lib/CoNVaDING.pm',
+	NAME         => 'CoNVaDING',
+	VERSION_FROM => 'CoNVaDING.pl',
 	PREREQ_PM    => {
 		'File::Glob' => '1.24',
 		'File::Basename' => '2.85',
@@ -21,7 +21,7 @@ WriteMakefile
 	BUILD_REQUIRES => {
 		'Test::More' => '0.47'
 	},
-	EXE_FILES' => [
+	EXE_FILES => [
 		'CoNVaDING.pl'
 	],
 );
