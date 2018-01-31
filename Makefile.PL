@@ -15,11 +15,7 @@ WriteMakefile
                 'List::Util' => '1.41',
                 'Math::Complex' => '1.59',
                 'POSIX' => '1.53',
-<<<<<<< HEAD
                 'Statistics::Distributions' => '1.02',
-=======
-                'Statistics::Distributions' => '1.02'
->>>>>>> f91e9cdef69dc5c63aefaedc2372e16b85274b54
                 'Statistics::Normality' => '0.01',
                 'File::Temp' => '0.2304',
 	},
