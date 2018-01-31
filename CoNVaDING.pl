@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+
 use strict;
 use warnings;
 use diagnostics;
@@ -58,6 +59,7 @@ $params->{sampleRatioScore}              = 0.09;
 $params->{percentageLessReliableTargets} = 20;
 $params->{numBestMatchSamplesCmdL}       = 30;
 $params->{mode}                          = "StartWithBam";
+$params->{samtoolsdepthmaxcov}           = 8000;
 
 #### get options
 GetOptions(
@@ -78,6 +80,7 @@ GetOptions(
     "sampleRatioScore:s"              => \$params->{sampleRatioScore}, #optional
     "targetQcList:s"                  => \$params->{targetQcList}, #optional
     "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets}, #optional
+    "samtoolsdepthmaxcov"             => \$params->{samtoolsdepthmaxcov},
     "h|help"                          => sub { usage() and exit(1)},
     "version"                         => sub { print "CoNVaDING relaod v".$version_reload." modified fork from CoNVaDING v".$version."\n" and exit(1)}
 );
@@ -2358,6 +2361,7 @@ sub countFromBam {
             my $target= $array[4] || "";
             my $extractcov = join " ",  "samtools", 
                                         "depth",
+                                        "-d",$params -> {samtoolsdepthmaxcov},
                                         "-r",
                                         $chr.":".$start."-".$stop,
                                         "-a",
@@ -2365,7 +2369,7 @@ sub countFromBam {
                                         "-Q",0,
                                         $bam,
                                         "| awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
-            my $regioncov = `$extractcov`;
+            my $regioncov = join("\n",CmdRunner($extractcov));
             chomp $regioncov;
             unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
                 $regioncov = 0;
@@ -2555,7 +2559,8 @@ sub rmDupBam {
     my $rmdup_bam   = File::Temp->new( TEMPLATE => 'tempXXXXX',DIR => $tmp_dir, SUFFIX => '.rmdup.bam'  );
     my $aligned_sam = File::Temp->new( TEMPLATE => 'tempXXXXX',DIR => $tmp_dir, SUFFIX => '.aligned.only.sam');
 
-    
+    #Clean this up should be something like  samtools rmdup input.bam | samtools view -Sb -h -F 0x400 >  rmdup.bam && samtools index rmdup.bam
+
     #Mark duplicates command
     my $rmdup = join " ",   "samtools",
                             "rmdup",
@@ -2587,11 +2592,12 @@ sub rmDupBam {
                             $rmDup_file->filename;
 
     #Execute the above defined steps
-    system( $rmdup ) == 0    or die "Removing duplicates from file failed: $!";
-    system( $rmdupIdx ) == 0 or die "Removing duplicates from file failed: $!";
-    system( $sam ) == 0      or die "Removing duplicates from file failed: $!";
-    system( $sam2bam ) == 0  or die "Removing duplicates from file failed: $!";
-    system( $bamIdx ) == 0   or die "Removing duplicates from file failed: $!";    
+    warn "Executed rmdup mark dups on input bam\n". join( "\n" , CmdRunner($rmdup ));
+    warn "Executed rmdupIdx: mark dups bam indexing\n". join( "\n" , CmdRunner($rmdupIdx ));
+    warn "Executed sam: hard remove dup reads and store to sam\n". join( "\n" , CmdRunner($sam ));
+    warn "Executed sam2bam: convert sam to bam\n". join( "\n" , CmdRunner($sam2bam ));
+    warn "Executed bamIdx: bam index command\n". join( "\n" , CmdRunner($bamIdx ));
+    
     
     return ($rmDup_file);
 }
@@ -2830,8 +2836,33 @@ PARAMETERS:
 
 -percentageLessReliableTargets\tTarget labelled as less reliable in percentage
 \t\t\tof control samples. DEFAULT: 20
+
+-samtoolsdepthmaxcov\tConfigure the max coverage of 'samtools depth' tool with this
+\t\t\tswitch. The count is capped at this value for an interval. DEFAULT=8000
+
 #########################################################################################################
 
 EOF
  
+}
+
+sub CmdRunner {
+        my $ret;
+        my $cmd = join(" ",@_);
+
+        warn localtime( time() ). " [INFO] system call:'". $cmd."'.\n";
+
+        @{$ret} = `($cmd )2>&1`;
+        if ($? == -1) {
+                die localtime( time() ). " [ERROR] failed to execute: $!\n";
+        }elsif ($? & 127) {
+                die localtime( time() ). " [ERROR] " .sprintf "child died with signal %d, %s coredump",
+                 ($? & 127),  ($? & 128) ? 'with' : 'without';
+        }elsif ($? != 0) {
+                die localtime( time() ). " [ERROR] " .sprintf "child died with signal %d, %s coredump",
+                 ($? & 127),  ($? & 128) ? 'with' : 'without';
+        }else {
+               	warn localtime( time() ). " [INFO] " . sprintf "child exited with value %d\n", $? >> 8;
+        }
+	return @{$ret};
 }
