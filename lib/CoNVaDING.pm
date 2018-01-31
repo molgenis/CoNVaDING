@@ -1,6 +1,6 @@
 package CoNVaDING;
 
-use 5.022001;
+require 5.22.0;
 use strict;
 use warnings;
 
@@ -65,16 +65,12 @@ shortlist: This list contains a subset of the longlist, filtered on within sampl
 final list: This list contains a subset of the shortlist, filtered on target QC metrics obtained from other samples.
 =back
 
-CoNVaDING has been written for use of CNV detection in high coverage NGS data (at least ~200x). With lower coverages it might still work, but more targets will fail QC metrics.
+CoNVaDING has been written for use of CNV detection in high coverage NGS data (at 
+least ~200x). This will fail with coverages >8000 due to samtools though. With 
+lower coverages it might still work, but more targets will fail QC metrics.
 
-The program is written in perl and has dependencies on specific perl libraries as well as on samtools version 1.3 or higher.
-
-=head1 INSTALL
-
-    perl Makefile.pl
-    make
-    make install
-
+The program is written in perl and has dependencies on specific perl libraries
+as well as on samtools version 1.3 or higher.
 
 =head2 EXPORT
 
@@ -83,26 +79,23 @@ None by default.
 
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
+https://github.com/molgenis/CoNVaDING_reload
 
-If you have a mailing list set up for your module, mention it here.
+=head1 CITATION
 
-If you have a web site set up for your module, mention it here.
+If you use this tool in publications cite:
 
-=head1 AUTHOR
-
-umcg-mterpstra, E<lt>umcg-mterpstra@E<gt>
+Johansson LF, van Dijk F, de Boer EN, van Dijk-Bos KK, Jongbloed JD, 
+van der Hout AH, Westers H, Sinke RJ, Swertz MA, Sijmons RH, 
+Sikkema-Raddatz B. CoNVaDING: Single Exon Variation Detection in Targeted NGS Data. 
+Hum Mutat. 2016 May;37(5):457-64. doi: 10.1002/humu.22969. Epub 2016 Feb 24.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2018 by umcg-mterpstra
+GNU LESSER GENERAL PUBLIC LICENSE
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.22.1 or,
-at your option, any later version of Perl 5 you may have available.
+original version at https://github.com/molgenis/CoNVaDING_reload
 
+current version at https://github.com/mmterpstra/CoNVaDING_reload
 
 =cut

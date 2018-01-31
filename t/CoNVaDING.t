@@ -8,10 +8,9 @@
 use strict;
 use warnings;
 
-use Test::More;
-plan skip_all => 'Test not implemented';
-#tests => 1;
-#BEGIN { use_ok('CoNVaDING') };
+use Test::More tests => 1;
+
+BEGIN { use_ok('CoNVaDING') };
 
 #########################
 

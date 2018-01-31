@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use 5.22.0;
+require 5.22.0;
 
 use ExtUtils::MakeMaker;
 WriteMakefile
