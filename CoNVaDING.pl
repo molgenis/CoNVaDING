@@ -2359,7 +2359,7 @@ sub countFromBam {
             my $stop=$array[2];
             my $gene=$array[3];
             my $target= $array[4] || "";
-            my $extractcov = join " ",  "samtools", 
+            my $extractcov = join " ", ( "samtools", 
                                         "depth",
                                         "-d",$params -> {samtoolsdepthmaxcov},
                                         "-r",
@@ -2368,7 +2368,7 @@ sub countFromBam {
                                         "-q",0,
                                         "-Q",0,
                                         $bam,
-                                        "| awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
+                                        "| awk \'\{sum+=\$3\} END \{if(NR > 0 ){print sum\/NR\}else{print 0}}\'");
             my $regioncov = join("\n",CmdRunner($extractcov));
             chomp $regioncov;
             unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
