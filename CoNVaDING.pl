@@ -80,7 +80,7 @@ GetOptions(
     "sampleRatioScore:s"              => \$params->{sampleRatioScore}, #optional
     "targetQcList:s"                  => \$params->{targetQcList}, #optional
     "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets}, #optional
-    "samtoolsdepthmaxcov"             => \$params->{samtoolsdepthmaxcov},
+    "samtoolsdepthmaxcov:i"           => \$params->{samtoolsdepthmaxcov},
     "h|help"                          => sub { usage() and exit(1)},
     "version"                         => sub { print "CoNVaDING relaod v".$version_reload." modified fork from CoNVaDING v".$version."\n" and exit(1)}
 );
