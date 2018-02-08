@@ -224,7 +224,11 @@ print STDERR "\nStarting analysis $starttime\n";
 print STDERR "\n#######################################\n";
 print STDERR "Parameteres in effect in this Run:\n";
 foreach my $key (keys %{$params}){
-    print STDERR $key.":\t".$params->{$key}."\n";
+    if(defined($params->{$key})){
+        warn "\t$key:\t".$params->{$key}."\n";
+    }else{
+        warn "\t$key:\tundef=(FLAG in off position)\n";
+    }
 }
 print STDERR "#######################################\n";
 
@@ -2368,7 +2372,21 @@ sub countFromBam {
                                         "-q",0,
                                         "-Q",0,
                                         $bam,
-                                        "| awk \'\{sum+=\$3\} END \{if(NR > 0 ){print sum\/NR\}else{print 0}}\'");
+       	       	       	       	       	'| awk \'BEGIN {
+                                                    sum = 0
+                                                }{  
+       	       	       	       	       	       	       	if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
+       	       	       	       	       	       	       	       	print "ERROR: Depth is equal to maxcov, please set the option -samtoolsdepthmaxcov '.$params -> {samtoolsdepthmaxcov}.' to a higher value. (Stacktrace is safe to ignore)" >"/dev/stderr";
+       	       	       	       	       	       	       	       	exit 1;
+       	       	       	       	       	       	       	};
+       	       	       	       	       	       	       	sum+=$3
+       	       	       	       	       	       	} END {
+       	       	       	       	       	       	      	if(NR > 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ){
+                                                                print sum/NR
+                                                        }else if (NR == 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ) {
+                                                                print 0
+                                                        }else{} 
+       	       	       	       	       	        }\'');
             my $regioncov = join("\n",CmdRunner($extractcov));
             chomp $regioncov;
             unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
@@ -2852,7 +2870,8 @@ sub CmdRunner {
 
         warn localtime( time() ). " [INFO] system call:'". $cmd."'.\n";
 
-        @{$ret} = `($cmd )2>&1`;
+	#safety for everything
+        @{$ret} = `set -e -o pipefail && ($cmd )`;
         if ($? == -1) {
                 die localtime( time() ). " [ERROR] failed to execute: $!\n";
         }elsif ($? & 127) {
