@@ -16,7 +16,7 @@ use File::Temp qw/ tempfile tempdir /;
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 #my $version_reload = "1.3";
 #my $version = "1.2.1" ;
-our $VERSION = '1.3.2';
+our $VERSION = '1.3.8';
 my $version_reload = $VERSION;
 my $version = $VERSION;
 
@@ -2353,6 +2353,7 @@ sub countFromBam {
      
     my $counts_tmp_file   = File::Temp->new( TEMPLATE => 'tempXXXXX', SUFFIX => '.txt'  );
 
+    print $counts_tmp_file uc(join("\t", 'chr', 'start', 'stop', 'gene', 'target', 'regioncov'."\n"));
     foreach my $line (@bedfile){
         $line =~ s/(?>\x0D\x0A?|[\x0A-\x0C\x85\x{2028}\x{2029}])//; #Remove Unix and Dos style line endings
         chomp $line;
