@@ -25,7 +25,8 @@ CoNVaDING: Single Exon Variation Detection in Targeted NGS Data. Hum Mutat. 2016
                 'File::Temp' => '0.2304',
 	},
 	"BUILD_REQUIRES" => {
-		'Test::More' => '0.47'
+		'Test::More' => '0.47',
+		'ExtUtils::MakeMaker' => '0'
 	},
 	"EXE_FILES" => [
 		'CoNVaDING.pl'
