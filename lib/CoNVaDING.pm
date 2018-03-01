@@ -35,6 +35,8 @@ our @EXPORT = qw(
 __END__
 # Below is stub documentation for your module. You'd better edit it!
 
+=encoding utf8
+
 =head1 NAME
 
 CoNVaDING - CoNVaDING (Copy Number Variation Detection In Next-generation sequencing Gene panels)
@@ -56,13 +58,20 @@ targets and on all targets per gene. CNV prediction is based on a combination of
 of the sample of interest compared to the selected controlsamples. Quality (QC) metrics are calculated per
 sample and per analyzed target. Output is generated on three levels:
 
-=over
+=over 
+
 =item *
-longlist: This list contains all calls, disregarding the target quality.
+
+longlist	This list contains all calls, disregarding the target quality.
+
 =item *
-shortlist: This list contains a subset of the longlist, filtered on within sample target QC metrics.
+
+shortlist	This list contains a subset of the longlist, filtered on within sample target QC metrics.
+
 =item *
-final list: This list contains a subset of the shortlist, filtered on target QC metrics obtained from other samples.
+
+final list	This list contains a subset of the shortlist, filtered on target QC metrics obtained from other samples.
+
 =back
 
 CoNVaDING has been written for use of CNV detection in high coverage NGS data (at 
@@ -90,7 +99,7 @@ van der Hout AH, Westers H, Sinke RJ, Swertz MA, Sijmons RH,
 Sikkema-Raddatz B. CoNVaDING: Single Exon Variation Detection in Targeted NGS Data. 
 Hum Mutat. 2016 May;37(5):457-64. doi: 10.1002/humu.22969. Epub 2016 Feb 24.
 
-=head1 COPYRIGHT AND LICENSE
+=head1 LICENSE
 
 GNU LESSER GENERAL PUBLIC LICENSE
 

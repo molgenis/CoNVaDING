@@ -2535,8 +2535,14 @@ sub writeCountFile {
         my $genecount = $countsh->{ $gene }; #number of regions on gene
         my $genecov = ($genename/$genecount); #avg coverage per gene
         #Calculate normalized coverages
-        my $normAuto = (($coverageh->{ $key })/$covchrautoval);
-        my $normTotal = (($coverageh->{ $key })/$covchrall);
+	my $normAuto;
+	if($covchrautoval !=0){
+            $normAuto = (($coverageh->{ $key })/$covchrautoval);
+        }else{$normAuto=0;}
+        my $normTotal;
+        if($covchrall != 0){
+            $normTotal = (($coverageh->{ $key })/$covchrall);
+        }else{$normTotal=0;}
         my $normGene;
         if ($genecov != 0) { #Check if coverage for complete gene is not null, if it is, don't calculate
             $normGene = (($coverageh->{ $key })/$genecov);
