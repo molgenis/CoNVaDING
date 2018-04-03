@@ -2357,7 +2357,7 @@ sub countFromBam {
     foreach my $line (@bedfile){
         $line =~ s/(?>\x0D\x0A?|[\x0A-\x0C\x85\x{2028}\x{2029}])//; #Remove Unix and Dos style line endings
         chomp $line;
-        if ($line =~ m/.+\t[0-9]{1,}\t[0-9]{1,}\t[A-Za-z0-9]{1,}.+/gs){ #Check if line corresponds to chr, start, stop (Should we check if there is a genename, or do we assume this? Otherwise we could check regions and autoincrement them)
+        if ($line =~ m/^\S+\t[0-9]{1,}\t[0-9]{1,}\t[A-Za-z0-9]{1,}/gs){ #Check if line corresponds to chr, start, stop (Should we check if there is a genename, or do we assume this? Otherwise we could check regions and autoincrement them)
             my @array = split("\t", $line); #read line, split by tab
             my $chr=$array[0];
             my $start=$array[1];
@@ -2396,7 +2396,7 @@ sub countFromBam {
             $regioncov =~ s/-nan/0/gs;
             print $counts_tmp_file join "\t", $chr, $start, $stop, $gene, $target, $regioncov."\n";
         }else{
-            print STDERR "Incorrect BED file format, please check your BED file before processing.\n";
+            die 'ERROR ## Incorrect BED file format at line '.$. .' containing '.$line.' this does not match ^\S+\t[0-9]{1,}\t[0-9]{1,}\t[A-Za-z0-9]{1,} , please check your BED file before processing.\n';
         }
     }
     
