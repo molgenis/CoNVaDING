@@ -1,3 +1,5 @@
+ ![image](https://travis-ci.org/mmterpstra/CoNVaDING_reload.svg?branch=master)
+
 # CoNVaDING_reload
 
 This is a fork of the original project CoNVaDING
