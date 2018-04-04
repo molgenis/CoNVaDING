@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ use File::Temp qw/ tempfile tempdir /;
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 #my $version_reload = "1.3";
 #my $version = "1.2.1" ;
-our $VERSION = '1.3.8';
+our $VERSION = '1.3.10';
 my $version_reload = $VERSION;
 my $version = $VERSION;
 
