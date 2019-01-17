@@ -2285,7 +2285,7 @@ sub countFromBam {
             $start=$array[1];
             $stop=$array[2];
             $gene=$array[3];
-            my $extractcov = "samtools depth -r $chr:$start-$stop -a -q 0 -Q 0 $bam | awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
+            my $extractcov = "samtools depth -r $chr:$start-$stop -a -a -q 0 -Q 0 $bam | awk \'\{sum+=\$3\} END \{print sum\/NR\}\'";
             $regioncov = `$extractcov`;
             chomp $regioncov;
             if (defined $regioncov and length $regioncov) { #Check for empty variable, if true set coverage to 0
