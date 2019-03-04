@@ -2104,7 +2104,7 @@ sub createNormalizedCoverageFiles {
                     my $normautoControl=$linesControl[$normAutoIdxControl];
                     my $normsexControl=$linesControl[$normSexIdxControl];
                     my $keyControl = $lineControl;
-                    if ($chrSample == $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
+                    if ($chrSample eq $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
                         my $absDiffAuto = abs($normautoSample-$normautoControl); #Calculate absolute difference autosomal coverage
                         my $absDiffSex = abs($normsexSample-$normsexControl); #Calculate absolute difference all coverage
                         push(@absDiffsAuto, $absDiffAuto);
