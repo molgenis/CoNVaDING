@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -60,6 +60,7 @@ $params->{percentageLessReliableTargets} = 20;
 $params->{numBestMatchSamplesCmdL}       = 30;
 $params->{mode}                          = "StartWithBam";
 $params->{samtoolsdepthmaxcov}           = 8000;
+$params->{ampliconcov}           = 0;
 
 #### get options
 GetOptions(
@@ -80,7 +81,8 @@ GetOptions(
     "sampleRatioScore:s"              => \$params->{sampleRatioScore}, #optional
     "targetQcList:s"                  => \$params->{targetQcList}, #optional
     "percentageLessReliableTargets:s" => \$params->{percentageLessReliableTargets}, #optional
-    "samtoolsdepthmaxcov:i"           => \$params->{samtoolsdepthmaxcov},
+    "samtoolsdepthmaxcov:i"           => \$params->{samtoolsdepthmaxcov},#optional for startwitham
+    "ampliconcov:f"                     => \$params->{ampliconcov},#optional for startwithbam
     "h|help"                          => sub { usage() and exit(1)},
     "version"                         => sub { print "CoNVaDING relaod v".$version_reload." modified fork from CoNVaDING v".$version."\n" and exit(1)}
 );
@@ -2364,30 +2366,57 @@ sub countFromBam {
             my $stop=$array[2];
             my $gene=$array[3];
             my $target= $array[4] || "";
-            my $extractcov = join " ", ( "samtools", 
-                                        "depth",
-                                        "-d",$params -> {samtoolsdepthmaxcov},
-                                        "-r",
-                                        $chr.":".$start."-".$stop,
-                                        "-a",
-                                        "-q",0,
-                                        "-Q",0,
-                                        $bam,
-       	       	       	       	       	'| awk \'BEGIN {
-                                                    sum = 0
-                                                }{  
-       	       	       	       	       	       	       	if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
-       	       	       	       	       	       	       	       	print "ERROR: Depth is equal to maxcov, please set the option -samtoolsdepthmaxcov '.$params -> {samtoolsdepthmaxcov}.' to a higher value. (Stacktrace is safe to ignore)" >"/dev/stderr";
-       	       	       	       	       	       	       	       	exit 1;
-       	       	       	       	       	       	       	};
-       	       	       	       	       	       	       	sum+=$3
-       	       	       	       	       	       	} END {
-       	       	       	       	       	       	      	if(NR > 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ){
-                                                                print sum/NR
+            my $extractcov;
+            if($params -> {ampliconcov}){
+		#amplicon coverage mode/iontorrent 
+                $extractcov = join(' ' , ("bedtools intersect  -g ",
+					" <(samtools view  $bam -H |",
+					" perl -wne 'if(s/^\@SQ\tSN://){s!LN:!!; print};')",
+			  	"-F 0.85  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $spanbam  -b ",
+				$chr.":".$start."-".$stop,
+				"> $bam.tmp.bam;",
+				"samtools index $bam.tmp.bam;",
+				"samtools depth -d 5000 -r 1:115252174-115252314 -a -Q 0 -q 0 $bam.tmp.bam",'| awk \'BEGIN {
+                                                        sum = 0
+                                                     }{  
+       	       	       	       	       	                 if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
+       	       	       	       	       	           	       	print "ERROR: Depth is equal to maxcov, please set the option -samtoolsdepthmaxcov '.$params -> {samtoolsdepthmaxcov}.' to a higher value. (Stacktrace is safe to ignore)" >"/dev/stderr";
+       	       	       	       	       	       	               	exit 1;
+       	       	       	       	       	       	         };
+       	       	       	       	       	           	       	sum+=$3
+       	       	       	       	       	             } END {
+       	       	       	       	       	           	if(NR > 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ){
+                                                        	print sum/NR
                                                         }else if (NR == 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ) {
-                                                                print 0
+                                                        	print 0
                                                         }else{} 
-       	       	       	       	       	        }\'');
+       	       	       	       	       	             }\';',"rm $bam.tmp.bam"));
+            }else{
+                #regular mode
+                $extractcov = join " ", ( "samtools", 
+                                            "depth",
+                                            "-d",$params -> {samtoolsdepthmaxcov},
+                                            "-r",
+                                            $chr.":".$start."-".$stop,
+                                            "-a",
+                                            "-q",0,
+                                            "-Q",0,
+                                            $bam,
+       	       	       	           	       	'| awk \'BEGIN {
+                                                        sum = 0
+                                                     }{  
+       	       	       	       	       	                 if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
+       	       	       	       	       	           	       	print "ERROR: Depth is equal to maxcov, please set the option -samtoolsdepthmaxcov '.$params -> {samtoolsdepthmaxcov}.' to a higher value. (Stacktrace is safe to ignore)" >"/dev/stderr";
+       	       	       	       	       	       	               	exit 1;
+       	       	       	       	       	       	         };
+       	       	       	       	       	           	       	sum+=$3
+       	       	       	       	       	             } END {
+       	       	       	       	       	           	if(NR > 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ){
+                                                        	print sum/NR
+                                                        }else if (NR == 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ) {
+                                                        	print 0
+                                                        }else{} 
+       	       	       	       	       	             }\'');
             my $regioncov = join("\n",CmdRunner($extractcov));
             chomp $regioncov;
             unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
@@ -2865,6 +2894,8 @@ PARAMETERS:
 -samtoolsdepthmaxcov\tConfigure the max coverage of 'samtools depth' tool with this
 \t\t\tswitch. The count is capped at this value for an interval. DEFAULT=8000
 
+-ampliconcov\tConfigure to only select amplicons spanning the target regions by fraction
+\t\t\tso overlapping targets aren't counted twice in the overlapping bases(for iontorrent).
 #########################################################################################################
 
 EOF

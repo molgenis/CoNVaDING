@@ -4,8 +4,58 @@ use warnings;
 require 5.22.0;
 
 use ExtUtils::MakeMaker;
-WriteMakefile
-(
+#How to add a new file
+# -create the script and put in into src
+# -update the tests to do al least a syntax test
+# -Update pipeline/util with newer version numer
+#git add & commit it
+
+
+my $extdeps;
+$extdeps = [
+	{	"dep" => "htslib",
+		"test" => "(exit 0)",
+		"hint" => "wget https://github.com/samtools/htslib/releases/download/1.7/htslib-1.7.tar.bz2 && tar -jxf htslib* && cd htslib* && make" 
+	},{	"dep" => "samtools",
+		"test" => "which samtools",
+		"hint" => "wget https://github.com/samtools/samtools/releases/download/1.7/samtools-1.7.tar.bz2 && tar -jxf samtools* && cd samtools* && make"
+	},{	"dep" => "bedtools",
+		"test" => "bedtools --version",
+		"hint" => "wget https://github.com/arq5x/bedtools2/releases/download/v2.27.1/bedtools-2.27.1.tar.gz && tar -xzf https://github.com/arq5x/bedtools2/releases/download/v2.27.1/bedtools-2.27.1.tar.gz && cd bed* && make"
+	}
+];
+
+for my $dep (@{$extdeps}){
+	warn "testing for ".$dep -> {'dep'}.".\n";
+	CmdRunner($dep -> {'test'});
+}
+
+
+sub CmdRunner {
+        my $ret;
+        my $cmd = join(" ",@_);
+
+        warn localtime( time() ). " [INFO] system call:'". $cmd."'.\n";
+
+        @{$ret} = `($cmd )2>&1`;
+	my $exitcode = $?;
+        if ($exitcode == -1) {
+                die localtime( time() ). " [ERROR] failed to execute: $!\n";
+        }
+	elsif ($exitcode & 127) {
+                die localtime( time() ). " [ERROR] " .sprintf "child died with signal %d, %s coredump",
+                 ($exitcode & 127),  ($exitcode & 128) ? 'with' : 'without';
+        }
+	elsif ($exitcode != 0) {
+                die localtime( time() ). " [ERROR] " .sprintf "child died with signal %d, %s coredump",
+                 ($exitcode & 127),  ($exitcode & 128) ? 'with' : 'without';
+        }else {
+               	warn localtime( time() ). " [INFO] " . sprintf "child exited with value %d\n", $exitcode >> 8;
+        }
+		return @{$ret};
+}
+
+WriteMakefile(
 	"NAME"         => 'CoNVaDING',
 	"VERSION_FROM" => 'CoNVaDING.pl',
 	"ABSTRACT" => 'Copy Number Variation Detection In Next-generation sequencing Gene panels',
