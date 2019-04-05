@@ -2372,7 +2372,7 @@ sub countFromBam {
                 $extractcov = join(' ' , ("bedtools intersect  -g ",
 					" <(samtools view  $bam -H |",
 					" perl -wne 'if(s/^\@SQ\tSN://){s!LN:!!; print};')",
-			  	"-F 0.85  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $spanbam  -b ",
+			  	"-F 0.85  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $bam  -b ",
 				$chr.":".$start."-".$stop,
 				"> $bam.tmp.bam;",
 				"samtools index $bam.tmp.bam;",
@@ -2417,13 +2417,14 @@ sub countFromBam {
                                                         	print 0
                                                         }else{} 
        	       	       	       	       	             }\'');
-            my $regioncov = join("\n",CmdRunner($extractcov));
-            chomp $regioncov;
-            unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
-                $regioncov = 0;
-            }
-            $regioncov =~ s/-nan/0/gs;
-            print $counts_tmp_file join "\t", $chr, $start, $stop, $gene, $target, $regioncov."\n";
+           }
+        my $regioncov = join("\n",CmdRunner($extractcov));
+        chomp $regioncov;
+        unless (defined $regioncov) { #Check for empty variable, if true set coverage to 0
+          $regioncov = 0;
+        }
+        $regioncov =~ s/-nan/0/gs;
+        print $counts_tmp_file join "\t", $chr, $start, $stop, $gene, $target, $regioncov."\n";
         }else{
             die 'ERROR ## Incorrect BED file format at line '.$. .' containing '.$line.' this does not match ^\S+\t[0-9]{1,}\t[0-9]{1,}\t[A-Za-z0-9]{1,} , please check your BED file before processing.\n';
         }
