@@ -12,7 +12,7 @@ use POSIX qw(ceil);
 use POSIX qw(floor);
 use Statistics::Normality 'shapiro_wilk_test';
 use File::Temp qw/ tempfile tempdir /;
-
+use Data::Dumper;
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 #my $version_reload = "1.3";
 #my $version = "1.2.1" ;
@@ -86,6 +86,7 @@ GetOptions(
     "h|help"                          => sub { usage() and exit(1)},
     "version"                         => sub { print "CoNVaDING relaod v".$version_reload." modified fork from CoNVaDING v".$version."\n" and exit(1)}
 );
+# ((defined $params->{sampleAsControl} && defined $params->{controlsdir})&& $params->{controlsdir} ne $params->{outputdir})
 #Obligatory args
 usage() and exit(1) unless $params->{mode};
 usage() and exit(1) unless $params->{outputdir};
@@ -144,7 +145,7 @@ if ($params->{mode} eq "addToControls"){
         $params->{sampleAsControl} = 1;
     }
     if (not defined $params->{controlsDir}){
-        $params->{controlsDir} = $params->{outputDir};
+        $params->{controlsDir} = $params->{outputdir};
     }
 }
 
@@ -2207,7 +2208,7 @@ sub createNormalizedCoverageFiles {
                     my $normautoControl = $linesControl_fields[$normAutoIdxControl];
                     my $normsexControl  = $linesControl_fields[$normSexIdxControl];
                     my $keyControl = $lineControl;
-                    if ($chrSample == $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
+                    if ($chrSample eq $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
                         my $absDiffAuto = abs($normautoSample-$normautoControl); #Calculate absolute difference autosomal coverage
                         my $absDiffSex = abs($normsexSample-$normsexControl); #Calculate absolute difference all coverage
                         push(@absDiffsAuto, $absDiffAuto);
@@ -2333,7 +2334,7 @@ sub writeOutput {
     print OUTPUT $outputToWrite;
     close(OUTPUT);
     #If $params->{sampleAsControl} variable is specified write output files to controlsdir too
-    if (defined $params->{sampleAsControl} && defined $params->{controlsdir} && $params->{controlsdir} ne $params->{outputDir}){
+    if ((defined $params->{sampleAsControl} && defined $params->{controlsdir})&& $params->{controlsdir} ne $params->{outputdir}){
         my $c_dir = $params->{controlsdir};
         `cp $outputfile $c_dir/`;
     }
@@ -2369,28 +2370,28 @@ sub countFromBam {
             my $extractcov;
             if($params -> {ampliconcov}){
 		#amplicon coverage mode/iontorrent 
-                $extractcov = join(' ' , ("bedtools intersect  -g ",
-					" <(samtools view  $bam -H |",
-					" perl -wne 'if(s/^\@SQ\tSN://){s!LN:!!; print};')",
-			  	"-F 0.85  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $bam  -b ",
-				$chr.":".$start."-".$stop,
-				"> $bam.tmp.bam;",
-				"samtools index $bam.tmp.bam;",
-				"samtools depth -d 5000 -r 1:115252174-115252314 -a -Q 0 -q 0 $bam.tmp.bam",'| awk \'BEGIN {
-                                                        sum = 0
-                                                     }{  
+                $extractcov = join(' ' , ("samtools view  $bam -H |",
+					" perl -wne 'if(s/^\\\@SQ\\tSN://){s!LN:!!; print};' > $bam.genome ; ".'echo -e "'.$chr.'\t'.$start.'\t'.$stop.'" > '.$bam.'.bed;',
+					"bedtools intersect  -g ",
+					" $bam.genome",
+			  		"-F ".$params -> {ampliconcov}."  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $bam  -b $bam.bed ",
+					"> ${bam}_tmp.bam;",
+					"samtools index ${bam}_tmp.bam;",
+					"samtools depth -d 5000 -r  ".$chr.":".$start."-".$stop." -a -Q 0 -q 0 ${bam}_tmp.bam ",'| awk \'BEGIN {
+                                                        sum = 0;
+                                                     }{
        	       	       	       	       	                 if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
        	       	       	       	       	           	       	print "ERROR: Depth is equal to maxcov, please set the option -samtoolsdepthmaxcov '.$params -> {samtoolsdepthmaxcov}.' to a higher value. (Stacktrace is safe to ignore)" >"/dev/stderr";
        	       	       	       	       	       	               	exit 1;
        	       	       	       	       	       	         };
-       	       	       	       	       	           	       	sum+=$3
+       	       	       	       	       	           	       	sum+=$3;
        	       	       	       	       	             } END {
        	       	       	       	       	           	if(NR > 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ){
-                                                        	print sum/NR
+                                                        	print sum/NR;
                                                         }else if (NR == 0 && $3 < '.$params -> {samtoolsdepthmaxcov}.' ) {
-                                                        	print 0
+                                                        	print 0;
                                                         }else{} 
-       	       	       	       	       	             }\';',"rm $bam.tmp.bam"));
+       	       	       	       	       	             }\';',"rm ${bam}_tmp.bam "));
             }else{
                 #regular mode
                 $extractcov = join " ", ( "samtools", 
@@ -2510,19 +2511,23 @@ sub calcCovAutoSex {
     my $covchrautoval;
     my $covchrall;
     my %counts;
-    
+	
+    #
+
     foreach my $num (@$covchrauto){
-        $covchrautosum = ($covchrautosum + $num); #total autosomal coverage
+        $covchrautosum += $num; #total autosomal coverage
     }
     foreach my $num (@$covchrsex){
-        $covchrsexsum = ($covchrsexsum + $num); #total sex chromosomes coverage
+        $covchrsexsum += $num; #total sex chromosomes coverage
     }
     my $covchrallsum = ($covchrautosum + $covchrsexsum); #total coverage all chromosomes
     #count number of regions
-    my $covchrautolength=scalar(@$covchrauto);
-    my $covchrsexlength=scalar(@$covchrsex);
+    my $covchrautolength = scalar(@$covchrauto);
+    my $covchrsexlength = scalar(@$covchrsex);
     my $covchralllength = ($covchrautolength + $covchrsexlength);
     #calculate average coverage for all chromosomes and autosomal chromosomes only
+    #this errors on zero why?
+    warn Dumper(@_,$covchrautolength,$covchrsexlength)." ";
     $covchrall = ($covchrallsum/$covchralllength);
     #if sample does not have targets in sex chromossomes $covchrautolength is 0 and calculation fails
     if ($covchrautolength == 0){
@@ -2532,7 +2537,7 @@ sub calcCovAutoSex {
     }
     #Count occurences of genenames
     $counts{$_}++ for @$genes;
-    
+    #die Dumper(@_)." ";
     return($covchrautoval, $covchrall, \%counts);
 }
 
@@ -2808,7 +2813,7 @@ Usage: $0 <mode> <parameters>
 \t\t\t\tREQUIRED:
 \t\t\t\t[-inputDir, -outputDir, -bed, -controlsDir]
 \t\t\t\tOPTIONAL:
-\t\t\t\t[-rmDup, -useSampleAsControl]
+\t\t\t\t[-rmDup, -useSampleAsControl, -ampliconcov]
 
 \t\t\tStartWithAvgCount :
 \t\t\t\tStart with Average Count files as input. This is a five column text file
@@ -2910,7 +2915,7 @@ sub CmdRunner {
         warn localtime( time() ). " [INFO] system call:'". $cmd."'.\n";
 
 	#safety for everything
-        @{$ret} = `set -e -o pipefail && ($cmd )`;
+        @{$ret} = `set -e -o pipefail; ($cmd)`;
         if ($? == -1) {
                 die localtime( time() ). " [ERROR] failed to execute: $!\n";
         }elsif ($? & 127) {
