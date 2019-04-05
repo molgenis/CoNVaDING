@@ -1,0 +1,98 @@
+easyblock = 'Bundle'
+
+name = 'Perl-bundle-CoNVaDING'
+version = '20190403'          # Same as the vanilla Perl module on which these add-on modules depend.
+perlversion = "5.22.1"
+versionsuffix = '-Perl-' + perlversion + '-bare' # In format YY.MM.IncrementedReleaseNumber.
+
+homepage = 'http://www.perl.org/'
+description = """Larry Wall's Practical Extraction and Report Language. 
+    The PerlPlus bundle contains a plain vanilla Perl supplemented with a selection of add-on modules."""
+
+toolchain = {'name': 'foss', 'version': '2016a'}
+toolchainopts = {'optarch': True, 'pic': True}
+
+#osdependencies = [('libxml2-devel')]
+
+dependencies = [
+    ('Perl', perlversion, '-bare'),
+]
+
+exts_defaultclass = 'PerlModule'
+exts_filter = ("perldoc -lm %(ext_name)s ", "")
+
+#
+# Custom settings for generating Lmod module file.
+#
+modextrapaths = {'PERL5LIB': ['lib/perl5/', 'lib/perl5/site_perl','lib/perl5/site_perl/5.22.1/'] }
+moduleclass = 'lang'
+
+#
+# Only extensions
+#
+exts_list = [
+    ('Statistics::Distributions', '1.02', {
+        'source_tmpl': 'Statistics-Distributions-1.02.tar.gz',
+        'source_urls': ['http://www.cpan.org/authors/id/M/MI/MIKEK/'],
+    }),
+    ('Statistics::Normality', '0.01', {
+        'source_tmpl': 'Statistics-Normality-0.01.tar.gz',
+        'source_urls': ['http://search.cpan.org/CPAN/authors/id/M/MW/MWENDL/'],
+    }),
+    ('Getopt::Long', '2.50', {
+        'source_tmpl': 'Getopt-Long-2.50.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/J/JV/JV/'],
+    }),
+   ('List::Util', '1.50', {
+        'source_tmpl': 'Scalar-List-Utils-1.50.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/P/PE/PEVANS/'],
+    }),
+   ('Math::Complex', '1.59', {
+        'source_tmpl': 'Math-Complex-1.59.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/Z/ZE/ZEFRAM/'],
+    }),
+   ('File::Temp', '0.2309', {
+        'source_tmpl': 'File-Temp-0.2309.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/E/ET/ETHER/'],
+    }),
+#Module
+#	     IO::Seekable
+#	     Scalar::Util
+#	     Fcntl
+#	     File::Spec
+#	     POSIX
+#	     File::Path
+#	     parent
+#	     ExtUtils::MakeMaker
+#	     constant
+#	     Exporter
+#	     Test::More
+
+   ('Test::Simple', '1.302162', {
+        'source_tmpl': 'Test-Simple-1.302162.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/E/EX/EXODIST/'],
+    }),
+#Module Test::More
+#	     Scalar::Util
+#	     ExtUtils::MakeMaker
+#	     File::Spec
+#	     File::Temp
+#	     Storable
+#	     utf8
+   ('ExtUtils::MakeMaker', '0', {
+        'source_tmpl': 'Math-Complex-1.59.tar.gz',
+        'source_urls': ['https://cpan.metacpan.org/authors/id/Z/ZE/ZEFRAM/'],
+    })
+#Module
+#	     Data::Dumper
+#	     File::Spec
+#	     Pod::Man
+#	     File::Basename
+#	     Encode
+]
+
+sanity_check_paths = {
+    'files': [],
+    'dirs': ['lib/perl5/'],
+}
+
