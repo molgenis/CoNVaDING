@@ -16,7 +16,7 @@ use Data::Dumper;
 ######CHANGE VERSION PARAMETER IF VERSION IS UPDATED#####
 #my $version_reload = "1.3";
 #my $version = "1.2.1" ;
-our $VERSION = '1.3.11';
+our $VERSION = '1.3.13';
 my $version_reload = $VERSION;
 my $version = $VERSION;
 
@@ -2377,7 +2377,7 @@ sub countFromBam {
 			  		"-F ".$params -> {ampliconcov}."  -f ".$params -> {ampliconcov}."  -u  -sorted  -a $bam  -b $bam.bed ",
 					"> ${bam}_tmp.bam;",
 					"samtools index ${bam}_tmp.bam;",
-					"samtools depth -d 5000 -r  ".$chr.":".$start."-".$stop." -a -Q 0 -q 0 ${bam}_tmp.bam ",'| awk \'BEGIN {
+					"samtools depth -d ",$params -> {samtoolsdepthmaxcov}," -r  ".$chr.":".$start."-".$stop." -a -Q 0 -q 0 ${bam}_tmp.bam ",'| awk \'BEGIN {
                                                         sum = 0;
                                                      }{
        	       	       	       	       	                 if($3 == '.$params -> {samtoolsdepthmaxcov}. '){
