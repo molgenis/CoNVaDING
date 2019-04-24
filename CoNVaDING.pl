@@ -2351,6 +2351,9 @@ sub countFromBam {
     my @bedfile = <BED>;
     close(BED);
     
+    # Check for empty bed file
+    die "Empty bed file when analysing bed='".$params->{bedfile}."' when analysing '$bam' (have you been streaming the bedfile into the program?)." if(scalar(@bedfile) == 0);
+    
     #Check if style of regions in BED file is normal or UCSC (so incl. "chr" in chromosomename)
     getChrMatch(\@bedfile,$bam);
      
