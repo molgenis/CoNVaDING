@@ -4,7 +4,7 @@ Copy Number Variation Detection In Next-generation sequencing Gene panels was de
 
 The documentation for version 1.2.0 can be found here:
 
-https://molgenis.gitbooks.io/convading/
+https://molgenis.gitbook.io/convading/
 
 For documentation on version 1.1.6 please refer to:
 
