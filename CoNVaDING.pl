@@ -961,7 +961,7 @@ sub startWithBestScore{
         push(@NORMTOTAL, $refNormTotal);
         push(@NORMGENE, $refNormGene);
         #Finalize header line for outputfile
-        my $lin = "AUTO_RATIO\tAUTO_ZSCORE\tAUTO_VC\tGENE_RATIO\tGENE_ZSCORE\tGENE_VC\tSHAPIRO-WILK\n";
+        my $lin = "AUTO_RATIO\tAUTO_ZSCORE\tAUTO_VC\tAUTO_MEAN\tAUTO_SD\tGENE_RATIO\tGENE_ZSCORE\tGENE_VC\tSHAPIRO-WILK\n";
         $outputToWrite .= $lin; #concatenate full generated line to files
         
         #Iterate over controlfiles and put into array of arrays
@@ -1027,9 +1027,9 @@ sub startWithBestScore{
             
             $lin = $controlChr[$i] . "\t" . $controlStart[$i] . "\t" . $controlStop[$i] . "\t" . $controlGene[$i] . "\t$sampleValue\t";
             $outputToWrite .= $lin; #concatenate full generated line to files
-            $lin = "$autoRatio\t$autoZscore\t$autoVc\t";
+            $lin = "$autoRatio\t$autoZscore\t$autoVc\t$autoMean\t$autoSD\t";
             $outputToWrite .= $lin; #concatenate full generated line to files
-            
+
             my $TNsi = $NORMGENE[0]->[$i];
             calcMeanSD(\@TNciArray);
             undef(@TNciArray);
@@ -1234,7 +1234,7 @@ sub createOutputLists{
     open(BESTSCORE, "$outputdir/$outputPostfixRemoved.best.score.txt") or die("Unable to open file: $!"); #Read best match file
     my @bestScoreFile= <BESTSCORE>;
     close(BESTSCORE);
-    `rm $outputdir/$outputPostfixRemoved.best.score.txt`; #Remove *.best.score.txt file, since it is almost the same as other files produced
+#    `rm $outputdir/$outputPostfixRemoved.best.score.txt`; #Remove *.best.score.txt file, since it is almost the same as other files produced
     my @targets;
     my @genes;
     my @values;
@@ -2104,7 +2104,7 @@ sub createNormalizedCoverageFiles {
                     my $normautoControl=$linesControl[$normAutoIdxControl];
                     my $normsexControl=$linesControl[$normSexIdxControl];
                     my $keyControl = $lineControl;
-                    if ($chrSample == $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
+                    if ($chrSample eq $chrControl && $startSample == $startControl && $stopSample == $stopControl){ #Check if chr, start and stop match, if not throw error and skip this file from analysis
                         my $absDiffAuto = abs($normautoSample-$normautoControl); #Calculate absolute difference autosomal coverage
                         my $absDiffSex = abs($normsexSample-$normsexControl); #Calculate absolute difference all coverage
                         push(@absDiffsAuto, $absDiffAuto);
