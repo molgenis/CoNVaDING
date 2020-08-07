@@ -1,0 +1,7 @@
+language: perl
+perl:
+  - "5.22"
+before_install:
+  - sudo apt-get install -qq samtools
+  - sudo apt-get install -qq bedtools
+  - cpanm --installdeps --notest . || (tail -n 5000 /home/travis/.cpanm/work/*/build.log && exit 1)
