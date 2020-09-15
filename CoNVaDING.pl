@@ -2263,7 +2263,9 @@ sub countFromBam {
     my $retrieveBamHeader = "samtools view -H $bam";
     my $bamHeader = `$retrieveBamHeader`;
     my @bamHeaderLines = split("\n", $bamHeader);
-    my $bamFirstChr = $bamHeaderLines[1];
+    my ( $index )= grep { $bamHeaderLines[$_] =~ m/^\@SQ\tSN:(.+)\tLN:.+/gs } 0..$#bamHeaderLines;
+    #my $bamFirstChr = $bamHeaderLines[1];
+    my $bamFirstChr = $bamHeaderLines[$index];
     if ($bamFirstChr =~ m/^\@SQ\tSN:(.+)\tLN:.+/gs) {
         my $chr = $1;
         if ($chr =~ m/chr.+/gs) {
